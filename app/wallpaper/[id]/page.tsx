@@ -62,22 +62,24 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
 // Generate static params for popular wallpapers to improve performance
 export async function generateStaticParams() {
   try {
-    // Fetch popular wallpapers for static generation
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/wallpapers?limit=20&featured=true`, {
-      next: { revalidate: 3600 } // Revalidate every hour
-    })
+    // Use Supabase client directly to avoid circular dependencies and API calls during build
+    const { supabase } = await import('@/lib/supabase')
+    
+    const { data: wallpapers, error } = await supabase
+      .from('wallpapers')
+      .select('id')
+      .limit(20)
+      .order('created_at', { ascending: false })
 
-    if (!response.ok) {
-      console.warn('Failed to fetch wallpapers for static generation')
+    if (error) {
+      console.warn('Failed to fetch wallpapers for static generation:', error)
       return []
     }
 
-    const wallpapers = await response.json()
-
-    // Return the first 20 popular wallpapers for static generation
-    return wallpapers.slice(0, 20).map((wallpaper: any) => ({
+    // Return the wallpaper IDs for static generation
+    return wallpapers?.map((wallpaper) => ({
       id: wallpaper.id,
-    }))
+    })) || []
   } catch (error) {
     console.warn('Error generating static params:', error)
     return []
