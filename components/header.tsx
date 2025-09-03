@@ -33,12 +33,12 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
+          {/* Logo - Mobile Optimized */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <Download className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-xl">WallpaperHub</span>
+            <span className="font-bold text-lg sm:text-xl">WallpaperHub</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -71,25 +71,18 @@ export function Header() {
             </div>
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center space-x-2">
+          {/* Right Actions - Mobile Optimized */}
+          <div className="flex items-center space-x-1 sm:space-x-2">
             {/* Search Toggle - Mobile */}
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
               <Search className="h-5 w-5" />
             </Button>
 
-            {/* Theme Toggle */}
-            <ThemeToggle />
-
-            <DownloadHistory />
-
-            {/* User Actions */}
-            <Button variant="ghost" size="icon">
-              <Heart className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <User className="h-5 w-5" />
-            </Button>
+            {/* Hide less important items on small mobile */}
+            <div className="hidden sm:flex items-center space-x-2">
+              <ThemeToggle />
+              <DownloadHistory />
+            </div>
 
             {/* Mobile Menu */}
             <Sheet>
@@ -112,6 +105,13 @@ export function Header() {
                   <Link href="/latest" className="text-lg font-medium hover:text-primary transition-colors">
                     Latest
                   </Link>
+                  <div className="border-t pt-4 mt-4 sm:hidden">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <ThemeToggle />
+                      <span className="text-sm text-muted-foreground">Theme</span>
+                    </div>
+                    <DownloadHistory />
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

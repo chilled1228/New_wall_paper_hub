@@ -218,18 +218,10 @@ export function SearchResults({ query, filters }: SearchResultsProps) {
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
 
-                  {/* Action Buttons */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="flex space-x-2">
-                      <Button size="icon" variant="secondary" className="h-8 w-8">
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button size="icon" variant="secondary" className="h-8 w-8">
-                        <Heart className="h-3 w-3" />
-                      </Button>
-                      <Button size="icon" className="h-8 w-8">
-                        <Download className="h-3 w-3" />
-                      </Button>
+                  {/* Simple overlay for desktop hover */}
+                  <div className="absolute inset-0 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                      Tap to View & Download
                     </div>
                   </div>
                 </div>
