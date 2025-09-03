@@ -44,6 +44,10 @@ export const metadata: Metadata = {
   description: "Discover the most popular wallpapers based on likes and views. Trending designs loved by our community.",
 }
 
+// Force dynamic rendering to ensure real-time data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function PopularPage() {
   // Fetch wallpapers directly from Supabase instead of making HTTP requests
   const { data: wallpapers, error } = await supabase

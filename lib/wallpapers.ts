@@ -29,12 +29,12 @@ export async function fetchWallpapers(options: FetchWallpapersOptions = {}): Pro
     const url = `${API_BASE_URL}/api/wallpapers?${params.toString()}`
     const response = await fetch(url, {
       next: {
-        revalidate: 600, // Cache for 10 minutes
+        revalidate: 30, // Cache for 30 seconds for faster updates
         tags: ['wallpapers', ...(options.category ? [`category-${options.category}`] : [])]
       },
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=3600'
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300'
       },
     })
 

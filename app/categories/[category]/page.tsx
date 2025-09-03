@@ -44,12 +44,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   )
 }
 
-// Generate static params for all categories
-export function generateStaticParams() {
-  return categories.map((category) => ({
-    category: category.slug,
-  }))
-}
+// Generate static params for all categories (commented out for dynamic rendering)
+// export function generateStaticParams() {
+//   return categories.map((category) => ({
+//     category: category.slug,
+//   }))
+// }
 
 // Generate metadata for each category
 export async function generateMetadata({ params }: CategoryPageProps) {
@@ -67,3 +67,7 @@ export async function generateMetadata({ params }: CategoryPageProps) {
     description: `Download high-quality ${category.name.toLowerCase()} wallpapers. ${category.description}`,
   }
 }
+
+// Force dynamic rendering to ensure real-time data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0

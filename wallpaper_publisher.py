@@ -3,6 +3,7 @@
 Wallpaper Publisher - A Tkinter application for uploading and managing wallpapers
 Integrates with Supabase database and Cloudflare R2 storage
 Uses Google Gemini AI for automatic metadata generation
+Generates SEO-friendly slugs matching the website's URL structure
 """
 
 import tkinter as tk
@@ -15,6 +16,7 @@ from typing import Optional, Dict, List
 import json
 from datetime import datetime
 import uuid
+import re
 
 # Third-party imports
 try:
@@ -94,7 +96,12 @@ class WallpaperPublisher:
         
         # Title
         title_label = ttk.Label(main_frame, text="Wallpaper Publisher", font=("Arial", 16, "bold"))
-        title_label.pack(pady=(0, 20))
+        title_label.pack(pady=(0, 10))
+        
+        # Info label about SEO-friendly URLs
+        info_label = ttk.Label(main_frame, text="🔗 Publishes wallpapers with SEO-friendly URLs (e.g., /wallpaper/category-title-id)", 
+                              font=("Arial", 9), foreground="gray")
+        info_label.pack(pady=(0, 20))
         
         # Image selection frame
         image_frame = ttk.LabelFrame(main_frame, text="Image Selection", padding=10)
@@ -146,7 +153,13 @@ class WallpaperPublisher:
         # Title field
         ttk.Label(left_column, text="Title:").pack(anchor=tk.W)
         self.title_entry = ttk.Entry(left_column, width=40)
-        self.title_entry.pack(fill=tk.X, pady=(0, 10))
+        self.title_entry.pack(fill=tk.X, pady=(0, 5))
+        self.title_entry.bind('<KeyRelease>', self.update_slug_preview)
+        
+        # Slug preview label
+        self.slug_preview_label = ttk.Label(left_column, text="Slug preview will appear here", 
+                                          font=("Arial", 8), foreground="gray")
+        self.slug_preview_label.pack(anchor=tk.W, pady=(0, 10))
         
         # Category field
         ttk.Label(left_column, text="Category:").pack(anchor=tk.W)
@@ -154,6 +167,7 @@ class WallpaperPublisher:
         self.category_combo = ttk.Combobox(left_column, textvariable=self.category_var, 
                                          values=["nature", "minimal", "abstract", "urban", "space", "art"])
         self.category_combo.pack(fill=tk.X, pady=(0, 10))
+        self.category_combo.bind('<<ComboboxSelected>>', self.update_slug_preview)
         
         # Tags field
         ttk.Label(right_column, text="Tags (comma-separated):").pack(anchor=tk.W)
@@ -257,6 +271,26 @@ class WallpaperPublisher:
             self.preview_label.config(image="", text=f"Preview error: {str(e)}")
             messagebox.showerror("Preview Error", f"Could not preview image: {str(e)}")
     
+    def update_slug_preview(self, event=None):
+        """Update the slug preview as user types"""
+        title = self.title_entry.get().strip()
+        category = self.category_var.get().strip()
+        
+        if title and category:
+            # Clean title for slug preview
+            clean_title = re.sub(r'[^a-z0-9\s-]', '', title.lower())
+            clean_title = re.sub(r'\s+', '-', clean_title)
+            clean_title = re.sub(r'-+', '-', clean_title).strip('-')[:50]
+            
+            # Clean category
+            clean_category = re.sub(r'[^a-z0-9]', '', category.lower())
+            
+            # Generate preview slug
+            slug_preview = f"{clean_category}-{clean_title}-[id]"
+            self.slug_preview_label.config(text=f"🔗 /wallpaper/{slug_preview}", foreground="blue")
+        else:
+            self.slug_preview_label.config(text="Slug preview will appear here", foreground="gray")
+    
     def check_ready_state(self):
         """Check if all requirements are met for publishing"""
         api_key = self.gemini_key_entry.get().strip()
@@ -273,6 +307,9 @@ class WallpaperPublisher:
             self.publish_btn.config(state=tk.NORMAL)
         else:
             self.publish_btn.config(state=tk.DISABLED)
+        
+        # Update slug preview
+        self.update_slug_preview()
     
     def update_status(self, message: str, color: str = "black"):
         """Update status label"""
@@ -434,7 +471,11 @@ class WallpaperPublisher:
             result = self.supabase_client.table('wallpapers').insert(wallpaper_data).execute()
             
             if result.data:
-                self.root.after(0, lambda: self._publish_success(public_url))
+                # Get the inserted record with its ID
+                inserted_record = result.data[0]
+                wallpaper_id = inserted_record.get('id')
+                
+                self.root.after(0, lambda: self._publish_success_with_id(public_url, wallpaper_id, wallpaper_data))
             else:
                 raise Exception("Failed to insert into database")
                 
@@ -443,8 +484,43 @@ class WallpaperPublisher:
         finally:
             self.root.after(0, lambda: self.progress_bar.stop())
     
+    def _publish_success_with_id(self, public_url: str, wallpaper_id: str, wallpaper_data: Dict):
+        """Handle successful publishing with wallpaper ID"""
+        self.update_status("Wallpaper published successfully!", "green")
+        
+        # Generate the actual slug using the same logic as the frontend
+        title = wallpaper_data['title']
+        category = wallpaper_data['category']
+        
+        # Clean title for slug (matching frontend slug generation)
+        clean_title = re.sub(r'[^a-z0-9\s-]', '', title.lower())
+        clean_title = re.sub(r'\s+', '-', clean_title)
+        clean_title = re.sub(r'-+', '-', clean_title).strip('-')[:50]
+        
+        # Clean category
+        clean_category = re.sub(r'[^a-z0-9]', '', category.lower())
+        
+        # Use last 8 characters of ID as short ID
+        short_id = wallpaper_id[-8:] if len(wallpaper_id) >= 8 else wallpaper_id
+        
+        # Generate the actual slug
+        slug = f"{clean_category}-{clean_title}-{short_id}"
+        
+        success_message = f"""✅ Wallpaper published successfully!
+        
+📷 Image URL: {public_url}
+🔗 Wallpaper URL: /wallpaper/{slug}
+🆔 Wallpaper ID: {wallpaper_id}
+        
+🎉 Your wallpaper is now live and accessible via SEO-friendly URLs!
+        
+💡 Tip: The wallpaper will also appear in the '{category}' category page."""
+        
+        messagebox.showinfo("Success", success_message)
+        self.clear_all()
+    
     def _publish_success(self, public_url: str):
-        """Handle successful publishing"""
+        """Fallback success handler (should not be used with new system)"""
         self.update_status("Wallpaper published successfully!", "green")
         messagebox.showinfo("Success", f"Wallpaper published successfully!\nURL: {public_url}")
         self.clear_all()
@@ -467,6 +543,9 @@ class WallpaperPublisher:
         self.category_var.set("")
         self.tags_entry.delete(0, tk.END)
         self.description_text.delete(1.0, tk.END)
+        
+        # Reset slug preview
+        self.slug_preview_label.config(text="Slug preview will appear here", foreground="gray")
         
         self.update_status("Ready", "green")
         self.check_ready_state()

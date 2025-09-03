@@ -44,6 +44,10 @@ export const metadata: Metadata = {
   description: "Discover the latest and newest wallpapers uploaded to our collection. Fresh designs updated daily.",
 }
 
+// Force dynamic rendering to ensure real-time data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function LatestPage() {
   // Fetch wallpapers directly from Supabase instead of making HTTP requests
   const { data: wallpapers, error } = await supabase

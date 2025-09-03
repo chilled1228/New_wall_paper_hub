@@ -129,32 +129,32 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
   }
 }
 
-// Generate static params for popular wallpapers to improve performance
-export async function generateStaticParams() {
-  try {
-    // Use Supabase client directly to avoid circular dependencies and API calls during build
-    const { supabase } = await import('@/lib/supabase')
-    
-    const { data: wallpapers, error } = await supabase
-      .from('wallpapers')
-      .select('id, title, category')
-      .limit(20)
-      .order('created_at', { ascending: false })
+// Generate static params for popular wallpapers (commented out for dynamic rendering)
+// export async function generateStaticParams() {
+//   try {
+//     // Use Supabase client directly to avoid circular dependencies and API calls during build
+//     const { supabase } = await import('@/lib/supabase')
+//     
+//     const { data: wallpapers, error } = await supabase
+//       .from('wallpapers')
+//       .select('id, title, category')
+//       .limit(20)
+//       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.warn('Failed to fetch wallpapers for static generation:', error)
-      return []
-    }
+//     if (error) {
+//       console.warn('Failed to fetch wallpapers for static generation:', error)
+//       return []
+//     }
 
-    // Return the wallpaper slugs for static generation
-    return wallpapers?.map((wallpaper) => ({
-      slug: generateWallpaperSlug(wallpaper),
-    })) || []
-  } catch (error) {
-    console.warn('Error generating static params:', error)
-    return []
-  }
-}
+//     // Return the wallpaper slugs for static generation
+//     return wallpapers?.map((wallpaper) => ({
+//       slug: generateWallpaperSlug(wallpaper),
+//     })) || []
+//   } catch (error) {
+//     console.warn('Error generating static params:', error)
+//     return []
+//   }
+// }
 
 // Generate metadata for each wallpaper
 export async function generateMetadata({ params }: WallpaperPageProps): Promise<Metadata> {
