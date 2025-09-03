@@ -4,7 +4,8 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { WallpaperDetails } from "@/components/wallpaper-details"
 import { RelatedWallpapers } from "@/components/related-wallpapers"
-import { fetchWallpaperById } from "@/lib/wallpapers"
+import { supabase } from "@/lib/supabase"
+import { WallpaperWithStats } from "@/lib/database.types"
 import {
   generateImageStructuredData,
   generateOpenGraphMeta,
@@ -12,6 +13,37 @@ import {
   generateCanonicalUrl,
   generateMetaKeywords
 } from "@/lib/seo-utils"
+
+// Helper function to add mock stats to wallpapers for UI compatibility
+function addMockStats(wallpaper: any): WallpaperWithStats {
+  // Generate consistent mock data based on wallpaper ID
+  const id = wallpaper.id
+  const hash = id.split('').reduce((a: number, b: string) => {
+    a = ((a << 5) - a) + b.charCodeAt(0)
+    return a & a
+  }, 0)
+  
+  const downloads = Math.abs(hash % 50) + 5 // 5-55K downloads
+  const likes = Math.abs(hash % 10) + 1 // 1-11K likes
+  const views = downloads * 3 + Math.abs(hash % 20) // Views based on downloads
+  
+  return {
+    ...wallpaper,
+    downloads: `${downloads}.${Math.abs(hash % 10)}K`,
+    likes: `${likes}.${Math.abs(hash % 10)}K`,
+    views: `${views}.${Math.abs(hash % 10)}K`,
+    featured: Math.abs(hash % 3) === 0, // ~33% chance of being featured
+    resolutions: [
+      { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
+      { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
+      { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
+      { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
+    ],
+    colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"], // Default colors
+    uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+    author: "WallpaperHub"
+  }
+}
 interface WallpaperPageProps {
   params: Promise<{
     id: string
@@ -28,11 +60,20 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
       notFound()
     }
 
-    const wallpaper = await fetchWallpaperById(id)
+    // Fetch wallpaper directly from Supabase instead of making HTTP requests
+    const { data: wallpaperData, error } = await supabase
+      .from('wallpapers')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!wallpaper) {
+    if (error || !wallpaperData) {
+      console.error('Error fetching wallpaper:', error)
       notFound()
     }
+
+    // Add mock stats for UI compatibility
+    const wallpaper = addMockStats(wallpaperData)
 
     // Generate structured data for SEO
     const structuredData = generateImageStructuredData(wallpaper, `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${id}`)
@@ -100,14 +141,22 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
       }
     }
 
-    const wallpaper = await fetchWallpaperById(id)
+    // Fetch wallpaper directly from Supabase instead of making HTTP requests
+    const { data: wallpaperData, error } = await supabase
+      .from('wallpapers')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!wallpaper) {
+    if (error || !wallpaperData) {
       return {
         title: "Wallpaper Not Found | WallpaperHub",
         description: "The requested wallpaper could not be found.",
       }
     }
+
+    // Add mock stats for UI compatibility
+    const wallpaper = addMockStats(wallpaperData)
 
     const canonicalUrl = generateCanonicalUrl(id)
     const title = `${wallpaper.title} - Free ${wallpaper.category} Wallpaper | WallpaperHub`
