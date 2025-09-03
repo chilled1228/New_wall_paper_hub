@@ -18,6 +18,9 @@ interface SearchResultsProps {
     sortBy: string
   }
 }
+
+// Mock data for demonstration
+const mockResults = [
   {
     id: 1,
     title: "Mountain Sunrise",
