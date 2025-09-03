@@ -19,7 +19,6 @@ interface SearchResultsProps {
   }
 }
 
-// Mock data for demonstration
 const mockResults = [
   {
     id: 1,
