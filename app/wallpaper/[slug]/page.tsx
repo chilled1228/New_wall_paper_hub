@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { Metadata } from "next"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -13,6 +13,13 @@ import {
   generateCanonicalUrl,
   generateMetaKeywords
 } from "@/lib/seo-utils"
+import {
+  findWallpaperBySlug,
+  isValidSlugFormat,
+  generateCanonicalSlug,
+  extractIdFromSlug,
+  generateWallpaperSlug
+} from "@/lib/slug-utils"
 
 // Helper function to add mock stats to wallpapers for UI compatibility
 function addMockStats(wallpaper: any): WallpaperWithStats {
@@ -41,42 +48,64 @@ function addMockStats(wallpaper: any): WallpaperWithStats {
     ],
     colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"], // Default colors
     uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
-    author: "WallpaperHub"
+    author: "WallpaperHub",
+    tags: wallpaper.tags || []
   }
 }
+
 interface WallpaperPageProps {
   params: Promise<{
-    id: string
+    slug: string
   }>
 }
 
 export default async function WallpaperPage({ params }: WallpaperPageProps) {
   try {
-    const { id } = await params
+    const { slug } = await params
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(id)) {
+    // Validate slug format
+    if (!isValidSlugFormat(slug)) {
       notFound()
     }
 
-    // Fetch wallpaper directly from Supabase instead of making HTTP requests
-    const { data: wallpaperData, error } = await supabase
+    // Extract ID from slug
+    const shortId = extractIdFromSlug(slug)
+    if (!shortId) {
+      notFound()
+    }
+
+    // Find wallpaper by the short ID (last 8 characters of UUID)
+    // Query all wallpapers and filter by short ID in JavaScript to avoid PostgreSQL UUID operator issues
+    const { data: allWallpapers, error } = await supabase
       .from('wallpapers')
       .select('*')
-      .eq('id', id)
-      .single()
+    
+    if (error) {
+      console.error('Error fetching wallpapers:', error)
+      notFound()
+    }
+    
+    // Filter for wallpapers whose ID ends with the short ID
+    const wallpapers = allWallpapers?.filter(w => w.id.endsWith(shortId)) || []
 
-    if (error || !wallpaperData) {
-      console.error('Error fetching wallpaper:', error)
+    if (wallpapers.length === 0) {
       notFound()
     }
 
-    // Add mock stats for UI compatibility
+    // Get the exact wallpaper (should only be one with matching short ID)
+    const wallpaperData = wallpapers[0]
     const wallpaper = addMockStats(wallpaperData)
 
+    // Generate canonical slug for this wallpaper
+    const canonicalSlug = generateWallpaperSlug(wallpaper)
+    
+    // If the current slug doesn't match the canonical slug, redirect
+    if (slug !== canonicalSlug) {
+      redirect(`/wallpaper/${canonicalSlug}`)
+    }
+
     // Generate structured data for SEO
-    const structuredData = generateImageStructuredData(wallpaper, `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${id}`)
+    const structuredData = generateImageStructuredData(wallpaper, `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`)
 
     return (
       <div className="min-h-screen bg-background">
@@ -108,7 +137,7 @@ export async function generateStaticParams() {
     
     const { data: wallpapers, error } = await supabase
       .from('wallpapers')
-      .select('id')
+      .select('id, title, category')
       .limit(20)
       .order('created_at', { ascending: false })
 
@@ -117,9 +146,9 @@ export async function generateStaticParams() {
       return []
     }
 
-    // Return the wallpaper IDs for static generation
+    // Return the wallpaper slugs for static generation
     return wallpapers?.map((wallpaper) => ({
-      id: wallpaper.id,
+      slug: generateWallpaperSlug(wallpaper),
     })) || []
   } catch (error) {
     console.warn('Error generating static params:', error)
@@ -130,38 +159,66 @@ export async function generateStaticParams() {
 // Generate metadata for each wallpaper
 export async function generateMetadata({ params }: WallpaperPageProps): Promise<Metadata> {
   try {
-    const { id } = await params
+    const { slug } = await params
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(id)) {
+    // Validate slug format
+    if (!isValidSlugFormat(slug)) {
       return {
         title: "Wallpaper Not Found | WallpaperHub",
         description: "The requested wallpaper could not be found.",
       }
     }
 
-    // Fetch wallpaper directly from Supabase instead of making HTTP requests
-    const { data: wallpaperData, error } = await supabase
+    // Extract ID from slug
+    const shortId = extractIdFromSlug(slug)
+    if (!shortId) {
+      return {
+        title: "Wallpaper Not Found | WallpaperHub",
+        description: "The requested wallpaper could not be found.",
+      }
+    }
+
+    // Find wallpaper by the short ID
+    // Query all wallpapers and filter by short ID in JavaScript to avoid PostgreSQL UUID operator issues
+    const { data: allWallpapers, error } = await supabase
       .from('wallpapers')
       .select('*')
-      .eq('id', id)
-      .single()
+    
+    if (error) {
+      return {
+        title: "Wallpaper Not Found | WallpaperHub",
+        description: "The requested wallpaper could not be found.",
+      }
+    }
+    
+    // Filter for wallpapers whose ID ends with the short ID
+    const wallpapers = allWallpapers?.filter(w => w.id.endsWith(shortId)) || []
 
-    if (error || !wallpaperData) {
+    if (wallpapers.length === 0) {
       return {
         title: "Wallpaper Not Found | WallpaperHub",
         description: "The requested wallpaper could not be found.",
       }
     }
 
-    // Add mock stats for UI compatibility
+    const wallpaperData = wallpapers[0]
     const wallpaper = addMockStats(wallpaperData)
 
-    const canonicalUrl = generateCanonicalUrl(id)
+    const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`
     const title = `${wallpaper.title} - Free ${wallpaper.category} Wallpaper | WallpaperHub`
     const description = wallpaper.description || `Download ${wallpaper.title} wallpaper for free. High-quality ${wallpaper.category.toLowerCase()} wallpaper available in multiple resolutions.`
-    const keywords = generateMetaKeywords(wallpaper)
+    const keywords = [
+      ...new Set([
+        wallpaper.title.toLowerCase(),
+        wallpaper.category.toLowerCase(),
+        'wallpaper',
+        'mobile wallpaper',
+        'phone wallpaper',
+        'free wallpaper',
+        'hd wallpaper',
+        ...(wallpaper.tags || [])
+      ])
+    ].join(', ')
 
     return {
       title,
@@ -174,8 +231,30 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
       alternates: {
         canonical: canonicalUrl,
       },
-      openGraph: generateOpenGraphMeta(wallpaper, canonicalUrl),
-      twitter: generateTwitterMeta(wallpaper),
+      openGraph: {
+        title,
+        description,
+        url: canonicalUrl,
+        siteName: 'WallpaperHub',
+        images: [
+          {
+            url: wallpaper.image_url,
+            width: 1080,
+            height: 1920,
+            alt: `${wallpaper.title} - ${wallpaper.category} wallpaper preview`,
+          },
+        ],
+        locale: 'en_US',
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [wallpaper.image_url],
+        creator: '@wallpaperhub',
+        site: '@wallpaperhub',
+      },
       robots: {
         index: true,
         follow: true,

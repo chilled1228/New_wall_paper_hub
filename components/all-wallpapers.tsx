@@ -5,6 +5,7 @@ import { Download, Heart, Eye, Clock } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
+import { generateWallpaperSlug } from "@/lib/slug-utils"
 
 // Helper function to add mock stats to wallpapers for UI compatibility
 function addMockStats(wallpaper: any): WallpaperWithStats {
@@ -87,7 +88,7 @@ export async function AllWallpapers() {
         {/* Wallpapers Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sortedWallpapers.map((wallpaper) => (
-            <Link key={wallpaper.id} href={`/wallpaper/${wallpaper.id}`}>
+            <Link key={wallpaper.id} href={`/wallpaper/${generateWallpaperSlug(wallpaper)}`}>
               <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
                 <CardContent className="p-0">
                   {/* Image Container */}

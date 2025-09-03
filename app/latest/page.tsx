@@ -6,6 +6,7 @@ import { Download, Heart, Eye, Clock } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
+import { generateWallpaperSlug } from "@/lib/slug-utils"
 
 // Helper function to add mock stats to wallpapers for UI compatibility
 function addMockStats(wallpaper: any): WallpaperWithStats {
@@ -97,7 +98,7 @@ export default async function LatestPage() {
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="flex gap-2">
                     <Button size="sm" variant="secondary" asChild>
-                      <Link href={`/wallpaper/${wallpaper.id}`}>
+                      <Link href={`/wallpaper/${generateWallpaperSlug(wallpaper)}`}>
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Link>
@@ -145,7 +146,7 @@ export default async function LatestPage() {
 
                 <div className="flex gap-2">
                   <Button className="flex-1" asChild>
-                    <Link href={`/wallpaper/${wallpaper.id}`}>
+                    <Link href={`/wallpaper/${generateWallpaperSlug(wallpaper)}`}>
                       View Details
                     </Link>
                   </Button>

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Download, Heart, Eye, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { fetchPopularWallpapers } from "@/lib/wallpapers"
+import { generateWallpaperSlug } from "@/lib/slug-utils"
 export async function PopularWallpapers() {
   const popularWallpapers = await fetchPopularWallpapers(6)
   return (
@@ -24,7 +25,7 @@ export async function PopularWallpapers() {
         {/* Wallpapers Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {popularWallpapers.map((wallpaper, index) => (
-            <Link key={wallpaper.id} href={`/wallpaper/${wallpaper.id}`}>
+            <Link key={wallpaper.id} href={`/wallpaper/${generateWallpaperSlug(wallpaper)}`}>
               <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
                 <CardContent className="p-0">
                   {/* Image Container */}
