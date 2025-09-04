@@ -1,4 +1,3 @@
-import { Header } from "@/components/header"
 import { HeroSection } from "@/components/hero-section"
 import { AllWallpapers } from "@/components/all-wallpapers"
 import { Categories } from "@/components/categories"
@@ -11,7 +10,6 @@ export const revalidate = 0
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main>
         <HeroSection />
         <AllWallpapers />

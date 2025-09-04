@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Download, Heart, Share2 } from "lucide-react"
+import { ArrowLeft, Download, Heart, Share2, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface WallpaperDetailsProps {
@@ -37,14 +37,90 @@ interface WallpaperDetailsProps {
 
 export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
   const [isLiked, setIsLiked] = useState(false)
+  const [isLiking, setIsLiking] = useState(false)
+  const [likeCount, setLikeCount] = useState(parseInt(wallpaper.likes) || 0)
+  const [isHydrated, setIsHydrated] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadCount, setDownloadCount] = useState(parseInt(wallpaper.downloads) || 0)
   const { toast } = useToast()
 
+  // Handle hydration
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
+  // Check if user has already liked this wallpaper after hydration
+  useEffect(() => {
+    if (!isHydrated) return
+
+    const checkLikeStatus = async () => {
+      try {
+        // Get or create simple device ID
+        let deviceId = localStorage.getItem('simple_device_id')
+        if (!deviceId) {
+          deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
+          localStorage.setItem('simple_device_id', deviceId)
+        }
+        
+        // Always sync with server first to get accurate data
+        const response = await fetch(`/api/wallpapers/${wallpaper.id}/like?deviceId=${deviceId}`)
+        
+        if (response.ok) {
+          const data = await response.json()
+          
+          // Set state from server data (this is the source of truth)
+          setIsLiked(data.liked)
+          setLikeCount(data.totalLikes)
+          
+          // Update localStorage to match server state
+          let likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
+          if (data.liked && !likedWallpapers.includes(wallpaper.id)) {
+            likedWallpapers.push(wallpaper.id)
+            localStorage.setItem('liked_wallpapers', JSON.stringify(likedWallpapers))
+          } else if (!data.liked && likedWallpapers.includes(wallpaper.id)) {
+            const filtered = likedWallpapers.filter(id => id !== wallpaper.id)
+            localStorage.setItem('liked_wallpapers', JSON.stringify(filtered))
+          }
+        } else {
+          // Fallback to localStorage if server request fails
+          const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
+          setIsLiked(likedWallpapers.includes(wallpaper.id))
+        }
+
+        // Also get current download count from server
+        try {
+          const statsResponse = await fetch(`/api/wallpapers/${wallpaper.id}/stats`)
+          if (statsResponse.ok) {
+            const statsData = await statsResponse.json()
+            if (statsData.downloads !== undefined) {
+              setDownloadCount(statsData.downloads)
+            }
+          }
+        } catch (error) {
+          console.log('Could not fetch download stats:', error)
+        }
+      } catch (error) {
+        console.error('Error checking like status:', error)
+        // Fallback to localStorage if error
+        const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
+        setIsLiked(likedWallpapers.includes(wallpaper.id))
+      }
+    }
+
+    checkLikeStatus()
+  }, [wallpaper.id, isHydrated])
+
   const handleDownload = async () => {
+    if (isDownloading) return // Prevent multiple clicks
+    if (!isHydrated) return // Don't run on server
+    
+    setIsDownloading(true)
+    
     try {
       // Show loading state
       toast({
-        title: "Preparing Download",
-        description: "Please wait...",
+        title: "Preparing Original Quality Download",
+        description: "Fetching full resolution wallpaper...",
       })
 
       // Use the new download API route which handles CORS and file serving
@@ -60,30 +136,62 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
       link.click()
       document.body.removeChild(link)
 
-      // Also record the download interaction
+      // Record the download interaction and update count
       try {
-        await fetch('/api/interactions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            wallpaper_id: wallpaper.id,
-            interaction_type: 'download'
+        // Get device ID for tracking - ensure we're on client side
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+          let deviceId = localStorage.getItem('simple_device_id')
+          if (!deviceId) {
+            deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
+            localStorage.setItem('simple_device_id', deviceId)
+          }
+
+          const response = await fetch('/api/interactions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              wallpaper_id: wallpaper.id,
+              interaction_type: 'download',
+              session_id: deviceId
+            })
           })
-        })
+
+          if (response.ok) {
+            const data = await response.json()
+            // Update download count if returned from API
+            if (data.totalDownloads) {
+              setDownloadCount(data.totalDownloads)
+            } else {
+              // Fallback: increment local count
+              setDownloadCount(prev => prev + 1)
+            }
+          }
+        } else {
+          console.log('localStorage not available, skipping interaction tracking')
+          // Still increment local count as fallback
+          setDownloadCount(prev => prev + 1)
+        }
       } catch (interactionError) {
         console.log('Failed to record download interaction:', interactionError)
-        // Don't block the download for this
+        // Still increment local count as fallback
+        setDownloadCount(prev => prev + 1)
       }
 
       toast({
-        title: "Download Started",
-        description: `${wallpaper.title} is downloading...`,
+        title: "Download Started! 📱",
+        description: `${wallpaper.title} (original quality) is downloading...`,
       })
+
+      // Small delay to show feedback before resetting button
+      setTimeout(() => {
+        setIsDownloading(false)
+      }, 2000)
 
     } catch (error) {
       console.error('Download failed:', error)
+      setIsDownloading(false)
       toast({
         title: "Download Failed", 
         description: "Please try again later. If the problem persists, try right-clicking the image to save.",
@@ -116,11 +224,64 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
     }
   }
 
-  const handleLike = () => {
-    setIsLiked(!isLiked)
-    toast({
-      title: isLiked ? "Removed from favorites" : "Added to favorites",
-    })
+  const handleLike = async () => {
+    if (isLiking) return
+    
+    setIsLiking(true)
+    const newLikedState = !isLiked
+    
+    // Simple device ID using localStorage
+    let deviceId = localStorage.getItem('simple_device_id')
+    if (!deviceId) {
+      deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
+      localStorage.setItem('simple_device_id', deviceId)
+    }
+
+    try {
+      const response = await fetch(`/api/wallpapers/${wallpaper.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deviceId,
+          action: newLikedState ? 'like' : 'unlike'
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Update local state
+        setIsLiked(data.liked)
+        setLikeCount(data.totalLikes)
+
+        // Update localStorage
+        let likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
+        if (data.liked && !likedWallpapers.includes(wallpaper.id)) {
+          likedWallpapers.push(wallpaper.id)
+        } else if (!data.liked) {
+          likedWallpapers = likedWallpapers.filter(id => id !== wallpaper.id)
+        }
+        localStorage.setItem('liked_wallpapers', JSON.stringify(likedWallpapers))
+
+        toast({
+          title: data.liked ? "Added to favorites! ❤️" : "Removed from favorites",
+          description: data.liked ? `Total likes: ${data.totalLikes}` : "Like removed"
+        })
+      } else {
+        throw new Error(data.error || 'Failed to update like')
+      }
+    } catch (error) {
+      console.error('Error updating like:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update like. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLiking(false)
+    }
   }
 
   return (
@@ -138,7 +299,7 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
           <div className="relative w-full">
             <div className="aspect-[9/16] sm:aspect-[3/4] w-full overflow-hidden rounded-lg">
               <img
-                src={wallpaper.image_url || "/placeholder.svg"}
+                src={wallpaper.medium_url || wallpaper.image_url || "/placeholder.svg"}
                 alt={wallpaper.title}
                 className="w-full h-full object-cover"
               />
@@ -162,36 +323,63 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
           {/* Simple Stats */}
           <div className="flex justify-center space-x-6 py-4">
             <div className="text-center">
-              <div className="text-lg font-bold text-primary">{wallpaper.downloads}</div>
+              <div className="text-lg font-bold text-primary">{downloadCount}</div>
               <div className="text-xs text-muted-foreground">Downloads</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-primary">{wallpaper.likes}</div>
+              <div className="text-lg font-bold text-primary">{likeCount}</div>
               <div className="text-xs text-muted-foreground">Likes</div>
             </div>
           </div>
 
           {/* Simple Action Buttons */}
           <div className="space-y-3">
-            {/* Primary Download Button */}
-            <Button 
-              onClick={handleDownload} 
-              className="w-full h-12 text-lg font-semibold"
-              size="lg"
-            >
-              <Download className="h-5 w-5 mr-2" />
-              Download Wallpaper
-            </Button>
+            {/* Primary Download Button with Tooltip */}
+            <div className="relative group">
+              <Button 
+                onClick={handleDownload} 
+                disabled={isDownloading}
+                className={`w-full h-12 text-lg font-semibold relative transition-all duration-300 ${
+                  isDownloading 
+                    ? 'animate-pulse bg-primary/80 shadow-lg shadow-primary/50' 
+                    : 'hover:shadow-md'
+                }`}
+                size="lg"
+              >
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-5 w-5 mr-2" />
+                    Download Original Quality
+                  </>
+                )}
+              </Button>
+              
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                <div className="text-center">
+                  <div className="font-medium">Original Full Resolution</div>
+                  <div className="text-xs text-gray-300">Highest quality • Perfect for all devices</div>
+                </div>
+                {/* Tooltip arrow */}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
 
             {/* Secondary Actions */}
             <div className="flex space-x-3">
               <Button 
                 variant={isLiked ? "default" : "outline"} 
                 onClick={handleLike} 
+                disabled={isLiking}
                 className="flex-1"
               >
-                <Heart className={`h-4 w-4 mr-2 ${isLiked ? "fill-current" : ""}`} />
-                {isLiked ? "Liked" : "Like"}
+                <Heart className={`h-4 w-4 mr-2 ${isLiked ? "fill-current text-red-500" : ""}`} />
+                {isLiking ? "..." : (isLiked ? "Liked" : "Like")}
               </Button>
               <Button variant="outline" onClick={handleShare} className="flex-1">
                 <Share2 className="h-4 w-4 mr-2" />

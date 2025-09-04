@@ -15,7 +15,7 @@ export async function GET(
     // Get wallpaper info from database
     const { data: wallpaper, error } = await supabase
       .from('wallpapers')
-      .select('id, title, original_url, large_url, medium_url, image_url')
+      .select('id, title, original_url')
       .eq('id', id)
       .single()
 
@@ -23,11 +23,11 @@ export async function GET(
       return NextResponse.json({ error: 'Wallpaper not found' }, { status: 404 })
     }
 
-    // Determine the best quality image URL
-    const imageUrl = wallpaper.original_url || wallpaper.large_url || wallpaper.medium_url || wallpaper.image_url
+    // Only use original URL for downloads (highest quality)
+    const imageUrl = wallpaper.original_url
 
     if (!imageUrl) {
-      return NextResponse.json({ error: 'No image URL available' }, { status: 404 })
+      return NextResponse.json({ error: 'Original wallpaper not available' }, { status: 404 })
     }
 
     try {

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation"
-import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { CategoryWallpapers } from "@/components/category-wallpapers"
 import { CategoryHeader } from "@/components/category-header"
@@ -34,7 +33,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main>
         <CategoryHeader category={category} />
         <CategoryWallpapers categorySlug={categorySlug} />

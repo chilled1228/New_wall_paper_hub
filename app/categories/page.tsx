@@ -1,4 +1,3 @@
-import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { CategoriesGrid } from "@/components/categories-grid"
 import { TrendingUp, Star, Clock } from "lucide-react"
@@ -6,7 +5,6 @@ import { TrendingUp, Star, Clock } from "lucide-react"
 export default function CategoriesPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main>
         {/* Hero Section */}
         <section className="py-16 lg:py-24 bg-gradient-to-br from-primary/5 via-background to-accent/5">

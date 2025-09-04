@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { SearchFilters } from "@/components/search-filters"
 import { SearchResults } from "@/components/search-results"
@@ -35,7 +34,6 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Header */}
         <div className="mb-8">

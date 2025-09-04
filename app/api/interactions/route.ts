@@ -70,7 +70,51 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Get updated stats for this wallpaper
+    // Update wallpaper stats based on interaction type
+    if (interaction_type === 'download') {
+      // Count total downloads for this wallpaper
+      const { count: totalDownloads } = await supabase
+        .from('user_interactions')
+        .select('*', { count: 'exact' })
+        .eq('wallpaper_id', wallpaper_id)
+        .eq('interaction_type', 'download')
+
+      // Update or create wallpaper stats
+      const { data: currentStats } = await supabase
+        .from('wallpaper_stats')
+        .select('*')
+        .eq('wallpaper_id', wallpaper_id)
+        .single()
+
+      if (currentStats) {
+        // Update existing stats
+        await supabase
+          .from('wallpaper_stats')
+          .update({
+            downloads: totalDownloads || 0,
+            updated_at: new Date().toISOString()
+          })
+          .eq('wallpaper_id', wallpaper_id)
+      } else {
+        // Create new stats record
+        await supabase
+          .from('wallpaper_stats')
+          .insert({
+            wallpaper_id,
+            downloads: totalDownloads || 0,
+            likes: 0,
+            views: 0
+          })
+      }
+
+      return NextResponse.json({ 
+        success: true,
+        interaction: interaction,
+        totalDownloads: totalDownloads || 0
+      })
+    }
+
+    // Get updated stats for other interaction types
     const { data: stats } = await supabase
       .from('wallpaper_stats')
       .select('*')

@@ -130,8 +130,8 @@ class WallpaperPublisherV2:
         info_frame.pack(fill=tk.X, pady=(0, 20))
         
         ttk.Label(info_frame, text="🔗 SEO-friendly URLs", font=("Arial", 9), foreground="blue").pack(anchor=tk.W)
-        ttk.Label(info_frame, text="📱 4 resolutions: thumbnail (150x200) → medium (400x533) → large (800x1067) → original", font=("Arial", 9), foreground="green").pack(anchor=tk.W)
-        ttk.Label(info_frame, text="⚡ Optimized loading: low-res preview → high-res download", font=("Arial", 9), foreground="orange").pack(anchor=tk.W)
+        ttk.Label(info_frame, text="📱 3 resolutions: thumbnail (150x200) → medium (400x533) → original (full)", font=("Arial", 9), foreground="green").pack(anchor=tk.W)
+        ttk.Label(info_frame, text="⚡ Optimized: thumbnail for grid → medium for preview → original for download", font=("Arial", 9), foreground="orange").pack(anchor=tk.W)
         
         # Image selection frame
         image_frame = ttk.LabelFrame(main_frame, text="Image Selection & Processing", padding=15)
@@ -163,9 +163,9 @@ class WallpaperPublisherV2:
         self.preview_notebook = ttk.Notebook(self.preview_frame)
         self.preview_notebook.pack(fill=tk.BOTH, expand=True)
         
-        # Create tabs for each resolution (initially empty)
+        # Create tabs for each resolution (thumbnail, medium, original)
         self.preview_tabs = {}
-        for resolution in ['original', 'large', 'medium', 'thumbnail']:
+        for resolution in ['original', 'medium', 'thumbnail']:
             tab_frame = ttk.Frame(self.preview_notebook)
             self.preview_notebook.add(tab_frame, text=resolution.title())
             
@@ -347,7 +347,7 @@ class WallpaperPublisherV2:
             original_tab['info_label'].config(text="Original image (not yet processed)")
             
             # Clear other tabs
-            for resolution in ['large', 'medium', 'thumbnail']:
+            for resolution in ['medium', 'thumbnail']:
                 tab = self.preview_tabs[resolution]
                 tab['label'].config(image="", text=f"Click 'Process Image' to generate {resolution} version")
                 tab['info_label'].config(text="")
@@ -394,7 +394,7 @@ class WallpaperPublisherV2:
     def _update_preview_tabs(self, results):
         """Update preview tabs with processed images"""
         try:
-            for resolution in ['thumbnail', 'medium', 'large', 'original']:
+            for resolution in ['thumbnail', 'medium', 'original']:
                 if resolution in results['processed_files']:
                     file_path = results['processed_files'][resolution]
                     metadata = results['metadata'][resolution]
@@ -621,25 +621,27 @@ class WallpaperPublisherV2:
             bucket_name = os.getenv('R2_BUCKET_NAME')
             uploaded_urls = {}
             
-            # Upload all processed resolutions
-            for resolution, file_path in self.processed_images['processed_files'].items():
-                self.root.after(0, lambda r=resolution: self.update_status(f"Uploading {r} resolution...", "blue"))
-                
-                # Generate unique filename for this resolution
-                filename = Path(file_path).name
-                
-                # Upload to R2
-                with open(file_path, 'rb') as file:
-                    self.r2_client.upload_fileobj(
-                        file,
-                        bucket_name,
-                        filename,
-                        ExtraArgs={'ContentType': 'image/jpeg'}
-                    )
-                
-                # Construct public URL
-                public_url = f"{os.getenv('R2_PUBLIC_URL')}/{filename}"
-                uploaded_urls[f"{resolution}_url"] = public_url
+            # Upload all resolutions (thumbnail, medium, original)
+            for resolution in ['thumbnail', 'medium', 'original']:
+                if resolution in self.processed_images['processed_files']:
+                    file_path = self.processed_images['processed_files'][resolution]
+                    self.root.after(0, lambda r=resolution: self.update_status(f"Uploading {r} resolution...", "blue"))
+                    
+                    # Generate unique filename for this resolution
+                    filename = Path(file_path).name
+                    
+                    # Upload to R2
+                    with open(file_path, 'rb') as file:
+                        self.r2_client.upload_fileobj(
+                            file,
+                            bucket_name,
+                            filename,
+                            ExtraArgs={'ContentType': 'image/jpeg'}
+                        )
+                    
+                    # Construct public URL
+                    public_url = f"{os.getenv('R2_PUBLIC_URL')}/{filename}"
+                    uploaded_urls[f"{resolution}_url"] = public_url
             
             self.root.after(0, lambda: self.update_status("Saving to database...", "blue"))
             
@@ -651,10 +653,9 @@ class WallpaperPublisherV2:
                 'description': self.description_text.get(1.0, tk.END).strip(),
                 'category': self.category_var.get().strip(),
                 'tags': tags,
-                'image_url': uploaded_urls['original_url'],  # Main image URL (backward compatibility)
+                'image_url': uploaded_urls['medium_url'],  # Main image URL for preview
                 'thumbnail_url': uploaded_urls.get('thumbnail_url'),
-                'medium_url': uploaded_urls.get('medium_url'), 
-                'large_url': uploaded_urls.get('large_url'),
+                'medium_url': uploaded_urls.get('medium_url'),
                 'original_url': uploaded_urls.get('original_url')
             }
             
@@ -699,7 +700,7 @@ class WallpaperPublisherV2:
         
         # Get file sizes for the success message
         size_info = []
-        for resolution in ['thumbnail', 'medium', 'large', 'original']:
+        for resolution in ['thumbnail', 'medium', 'original']:
             if resolution in self.processed_images['metadata']:
                 metadata = self.processed_images['metadata'][resolution]
                 size_kb = metadata['file_size'] / 1024
@@ -714,9 +715,9 @@ class WallpaperPublisherV2:
 🆔 Wallpaper ID: {wallpaper_id}
 
 🚀 Your wallpaper is now live with optimized loading:
-• Fast thumbnail preview for instant loading
-• Progressive enhancement to high quality
-• Original resolution available for download
+• Thumbnail for grid views (150x200)
+• Medium quality for preview pages (400x533)
+• Original resolution for downloads (full quality)
 
 💡 Tip: Appears in '{category}' category with SEO-friendly URLs!"""
         

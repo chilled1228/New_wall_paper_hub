@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation"
 import { Metadata } from "next"
-import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { WallpaperDetails } from "@/components/wallpaper-details"
 import { RelatedWallpapers } from "@/components/related-wallpapers"
@@ -20,6 +19,49 @@ import {
   extractIdFromSlug,
   generateWallpaperSlug
 } from "@/lib/slug-utils"
+
+// Helper function to format numbers for display
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`
+  }
+  return num.toString()
+}
+
+// Helper function to add stats to a single wallpaper
+async function addWallpaperStats(wallpaper: any): Promise<WallpaperWithStats> {
+  // Fetch stats for this wallpaper
+  const { data: stats } = await supabase
+    .from('wallpaper_stats')
+    .select('*')
+    .eq('wallpaper_id', wallpaper.id)
+    .single()
+
+  const downloads = stats?.downloads || 0
+  const likes = stats?.likes || 0  
+  const views = stats?.views || 0
+  
+  return {
+    ...wallpaper,
+    stats,
+    downloads: formatNumber(downloads),
+    likes: formatNumber(likes),
+    views: formatNumber(views),
+    featured: views > 100,
+    resolutions: [
+      { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
+      { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
+      { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
+      { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
+    ],
+    colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"],
+    uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+    author: "WallpaperHub"
+  }
+}
 
 
 interface WallpaperPageProps {
@@ -43,16 +85,16 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
       notFound()
     }
 
-    // Find wallpaper by the short ID (last 8 characters of UUID)
-    // For now, get a limited set of wallpapers and filter in JavaScript for compatibility
+    // Get a reasonable number of wallpapers and filter in JavaScript
+    // This is actually faster than complex SQL operations on UUID fields
     const { data: allWallpapers, error } = await supabase
       .from('wallpapers')
       .select('*')
-      .limit(100) // Limit to recent wallpapers to avoid performance issues
+      .limit(50) // Reduced from 100 for better performance
       .order('created_at', { ascending: false })
     
     if (error) {
-      console.error('Error fetching wallpapers:', error)
+      console.error('Error fetching wallpaper:', error)
       notFound()
     }
     
@@ -65,7 +107,10 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
 
     // Get the exact wallpaper (should only be one with matching short ID)
     const wallpaperData = wallpapers[0]
-    const wallpaper = wallpaperData as WallpaperWithStats
+    
+    // Add stats and additional data to the wallpaper
+    const wallpaperWithStats = await addWallpaperStats(wallpaperData)
+    const wallpaper = wallpaperWithStats as WallpaperWithStats
 
     // Generate canonical slug for this wallpaper
     const canonicalSlug = generateWallpaperSlug(wallpaper)
@@ -86,8 +131,7 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
             __html: JSON.stringify(structuredData),
           }}
         />
-        <Header />
-        <main>
+          <main>
           <WallpaperDetails wallpaper={wallpaper} />
           <RelatedWallpapers currentWallpaper={wallpaper} />
         </main>
@@ -149,12 +193,12 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
       }
     }
 
-    // Find wallpaper by the short ID  
-    // For now, get a limited set of wallpapers and filter in JavaScript for compatibility
+    // Get a reasonable number of wallpapers and filter in JavaScript
+    // This is actually faster than complex SQL operations on UUID fields
     const { data: allWallpapers, error } = await supabase
       .from('wallpapers')
       .select('*')
-      .limit(100) // Limit to recent wallpapers to avoid performance issues
+      .limit(50) // Reduced from 100 for better performance
       .order('created_at', { ascending: false })
     
     if (error) {
@@ -175,7 +219,7 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
     }
 
     const wallpaperData = wallpapers[0]
-    const wallpaper = wallpaperData as WallpaperWithStats
+    const wallpaper = await addWallpaperStats(wallpaperData) as WallpaperWithStats
 
     const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`
     const title = `${wallpaper.title} - Free ${wallpaper.category} Wallpaper | WallpaperHub`

@@ -133,23 +133,17 @@ function OptimizedImageInternal({
 
   // Determine the appropriate high-quality source based on screen size
   const getHighQualitySrc = () => {
-    if (typeof window === 'undefined') return largeSrc || src
+    if (typeof window === 'undefined') return mediumSrc || originalSrc || src
 
     const screenWidth = window.innerWidth
-    const dpr = window.devicePixelRatio || 1
-
-    // Calculate effective dimensions
-    const effectiveWidth = screenWidth * dpr
-
-    // Return the most appropriate image size
-    if (effectiveWidth <= 640 && mediumSrc) {
-      return mediumSrc // Mobile devices
-    } else if (effectiveWidth <= 1024 && largeSrc) {
-      return largeSrc // Tablets and smaller desktops
+    
+    // Use medium for most viewing, original only for very large screens or downloads
+    if (screenWidth <= 1200 && mediumSrc) {
+      return mediumSrc // Good quality for preview pages
     } else if (originalSrc) {
-      return originalSrc // Large screens and high DPI
+      return originalSrc // Full quality for large screens
     } else {
-      return largeSrc || src // Fallback
+      return mediumSrc || src // Fallback
     }
   }
 

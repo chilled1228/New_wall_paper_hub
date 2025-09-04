@@ -26,11 +26,10 @@ class ImageProcessor:
         # Register HEIF opener with Pillow (for iPhone photos)
         pillow_heif.register_heif_opener()
         
-        # Resolution configurations
+        # Resolution configurations - thumbnail for speed, medium for preview, original for download
         self.resolutions = {
             'thumbnail': {'width': 150, 'height': 200, 'quality': 60},
             'medium': {'width': 400, 'height': 533, 'quality': 75},
-            'large': {'width': 800, 'height': 1067, 'quality': 85},
             'original': {'width': None, 'height': None, 'quality': 95}  # Keep original size
         }
         
