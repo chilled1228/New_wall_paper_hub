@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 import { Search, Menu, Download, Heart, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { DownloadHistory } from "@/components/download-history"
 
@@ -91,26 +91,44 @@ export function Header() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80">
-                <div className="flex flex-col space-y-4 mt-8">
-                  <Link href="/" className="text-lg font-medium hover:text-primary transition-colors">
-                    Home
-                  </Link>
-                  <Link href="/categories" className="text-lg font-medium hover:text-primary transition-colors">
-                    Categories
-                  </Link>
-                  <Link href="/popular" className="text-lg font-medium hover:text-primary transition-colors">
-                    Popular
-                  </Link>
-                  <Link href="/latest" className="text-lg font-medium hover:text-primary transition-colors">
-                    Latest
-                  </Link>
-                  <div className="border-t pt-4 mt-4 sm:hidden">
-                    <div className="flex items-center space-x-2 mb-4">
-                      <ThemeToggle />
-                      <span className="text-sm text-muted-foreground">Theme</span>
+              <SheetContent side="right" className="w-[320px] sm:w-[400px] max-w-[90vw] p-0">
+                <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                <div className="flex flex-col h-full">
+                  {/* Header */}
+                  <div className="flex items-center space-x-3 p-6 pb-4 border-b bg-muted/20">
+                    <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+                      <Download className="h-5 w-5 text-primary-foreground" />
                     </div>
-                    <DownloadHistory />
+                    <span className="font-bold text-lg">WallpaperHub</span>
+                  </div>
+                  
+                  {/* Navigation Links */}
+                  <nav className="flex flex-col p-4 flex-1" role="navigation" aria-label="Main navigation">
+                    <div className="space-y-2">
+                      <Link href="/" className="flex items-center py-4 px-4 rounded-xl text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none">
+                        Home
+                      </Link>
+                      <Link href="/categories" className="flex items-center py-4 px-4 rounded-xl text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none">
+                        Categories
+                      </Link>
+                      <Link href="/popular" className="flex items-center py-4 px-4 rounded-xl text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none">
+                        Popular
+                      </Link>
+                      <Link href="/latest" className="flex items-center py-4 px-4 rounded-xl text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none">
+                        Latest
+                      </Link>
+                    </div>
+                  </nav>
+                  
+                  {/* Bottom Section */}
+                  <div className="border-t bg-muted/20 p-4 space-y-4">
+                    <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-background border">
+                      <span className="font-medium">Theme</span>
+                      <ThemeToggle />
+                    </div>
+                    <div className="px-2">
+                      <DownloadHistory />
+                    </div>
                   </div>
                 </div>
               </SheetContent>

@@ -2,25 +2,37 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { WallpaperWithStats } from '@/lib/database.types'
 
-// Helper function to add mock stats to wallpapers for UI compatibility
-function addMockStats(wallpaper: any): WallpaperWithStats {
-  // Generate consistent mock data based on wallpaper ID
-  const id = wallpaper.id
-  const hash = id.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0)
-    return a & a
-  }, 0)
-  
-  const downloads = Math.abs(hash % 50) + 5 // 5-55K downloads
-  const likes = Math.abs(hash % 10) + 1 // 1-11K likes
-  const views = downloads * 3 + Math.abs(hash % 20) // Views based on downloads
+// Helper function to format numbers for display
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`
+  }
+  return num.toString()
+}
+
+// Helper function to add real stats to wallpapers
+async function addRealStats(wallpaper: any): Promise<WallpaperWithStats> {
+  // Get real stats from database
+  const { data: stats } = await supabase
+    .from('wallpaper_stats')
+    .select('*')
+    .eq('wallpaper_id', wallpaper.id)
+    .single()
+
+  const downloads = stats?.downloads || 0
+  const likes = stats?.likes || 0
+  const views = stats?.views || 0
   
   return {
     ...wallpaper,
-    downloads: `${downloads}.${Math.abs(hash % 10)}K`,
-    likes: `${likes}.${Math.abs(hash % 10)}K`,
-    views: `${views}.${Math.abs(hash % 10)}K`,
-    featured: Math.abs(hash % 3) === 0, // ~33% chance of being featured
+    stats,
+    downloads: formatNumber(downloads),
+    likes: formatNumber(likes),
+    views: formatNumber(views),
+    featured: views > 100, // Mark as featured if it has significant views
     resolutions: [
       { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
       { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
@@ -73,8 +85,8 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid wallpaper data' }, { status: 500 })
     }
 
-    // Add mock stats for UI compatibility
-    const wallpaperWithStats = addMockStats(wallpaper)
+    // Add real stats from database
+    const wallpaperWithStats = await addRealStats(wallpaper)
 
     return NextResponse.json(wallpaperWithStats)
   } catch (error) {

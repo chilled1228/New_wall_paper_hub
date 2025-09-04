@@ -18,6 +18,10 @@ interface WallpaperDetailsProps {
     likes: string
     views: string
     image_url: string
+    thumbnail_url?: string
+    medium_url?: string
+    large_url?: string
+    original_url?: string
     resolutions: Array<{
       label: string
       width: number
@@ -43,35 +47,46 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
         description: "Please wait...",
       })
 
-      // Fetch the image as blob to force download
-      const response = await fetch(wallpaper.image_url)
-      const blob = await response.blob()
-      
-      // Create object URL
-      const url = window.URL.createObjectURL(blob)
+      // Use the new download API route which handles CORS and file serving
+      const downloadUrl = `/api/download/${wallpaper.id}`
       
       // Create download link
       const link = document.createElement("a")
-      link.href = url
-      link.download = `${wallpaper.title.replace(/\s+/g, "-").toLowerCase()}.jpg`
+      link.href = downloadUrl
+      link.download = `${wallpaper.title.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.jpg`
       
       // Force download
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
-      // Clean up object URL
-      window.URL.revokeObjectURL(url)
+
+      // Also record the download interaction
+      try {
+        await fetch('/api/interactions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            wallpaper_id: wallpaper.id,
+            interaction_type: 'download'
+          })
+        })
+      } catch (interactionError) {
+        console.log('Failed to record download interaction:', interactionError)
+        // Don't block the download for this
+      }
 
       toast({
         title: "Download Started",
         description: `${wallpaper.title} is downloading...`,
       })
+
     } catch (error) {
       console.error('Download failed:', error)
       toast({
         title: "Download Failed", 
-        description: "Please try again or right-click the image to save",
+        description: "Please try again later. If the problem persists, try right-clicking the image to save.",
         variant: "destructive"
       })
     }

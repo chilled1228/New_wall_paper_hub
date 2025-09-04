@@ -7,36 +7,6 @@ import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
 import { generateWallpaperSlug } from "@/lib/slug-utils"
 
-// Helper function to add mock stats to wallpapers for UI compatibility
-function addMockStats(wallpaper: any): WallpaperWithStats {
-  // Generate consistent mock data based on wallpaper ID
-  const id = wallpaper.id
-  const hash = id.split('').reduce((a: number, b: string) => {
-    a = ((a << 5) - a) + b.charCodeAt(0)
-    return a & a
-  }, 0)
-  
-  const downloads = Math.abs(hash % 50) + 5 // 5-55K downloads
-  const likes = Math.abs(hash % 10) + 1 // 1-11K likes
-  const views = downloads * 3 + Math.abs(hash % 20) // Views based on downloads
-  
-  return {
-    ...wallpaper,
-    downloads: `${downloads}.${Math.abs(hash % 10)}K`,
-    likes: `${likes}.${Math.abs(hash % 10)}K`,
-    views: `${views}.${Math.abs(hash % 10)}K`,
-    featured: Math.abs(hash % 3) === 0, // ~33% chance of being featured
-    resolutions: [
-      { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
-      { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
-      { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
-      { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
-    ],
-    colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"], // Default colors
-    uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
-    author: "WallpaperHub"
-  }
-}
 
 interface CategoryWallpapersProps {
   categorySlug: string
@@ -68,7 +38,6 @@ export async function CategoryWallpapers({ categorySlug }: CategoryWallpapersPro
   // Add mock stats and filter out invalid entries
   const categoryWallpapers = (wallpapers || [])
     .filter(wallpaper => wallpaper.id && wallpaper.title && wallpaper.image_url)
-    .map(wallpaper => addMockStats(wallpaper))
 
   return (
     <section className="py-16 lg:py-24">

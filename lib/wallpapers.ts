@@ -29,12 +29,12 @@ export async function fetchWallpapers(options: FetchWallpapersOptions = {}): Pro
     const url = `${API_BASE_URL}/api/wallpapers?${params.toString()}`
     const response = await fetch(url, {
       next: {
-        revalidate: 30, // Cache for 30 seconds for faster updates
+        revalidate: 0, // No caching - always fetch fresh data
         tags: ['wallpapers', ...(options.category ? [`category-${options.category}`] : [])]
       },
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       },
     })
 
@@ -63,11 +63,11 @@ export async function fetchWallpaperById(id: string): Promise<WallpaperWithStats
     const url = `${API_BASE_URL}/api/wallpapers/${id}`
     const response = await fetch(url, {
       next: {
-        revalidate: 3600, // Cache for 1 hour for better performance
+        revalidate: 0, // No caching - always fetch fresh data
         tags: [`wallpaper-${id}`] // Add cache tags for selective revalidation
       },
       headers: {
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400'
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
     })
 

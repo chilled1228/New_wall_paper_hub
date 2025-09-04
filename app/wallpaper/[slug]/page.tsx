@@ -21,37 +21,6 @@ import {
   generateWallpaperSlug
 } from "@/lib/slug-utils"
 
-// Helper function to add mock stats to wallpapers for UI compatibility
-function addMockStats(wallpaper: any): WallpaperWithStats {
-  // Generate consistent mock data based on wallpaper ID
-  const id = wallpaper.id
-  const hash = id.split('').reduce((a: number, b: string) => {
-    a = ((a << 5) - a) + b.charCodeAt(0)
-    return a & a
-  }, 0)
-  
-  const downloads = Math.abs(hash % 50) + 5 // 5-55K downloads
-  const likes = Math.abs(hash % 10) + 1 // 1-11K likes
-  const views = downloads * 3 + Math.abs(hash % 20) // Views based on downloads
-  
-  return {
-    ...wallpaper,
-    downloads: `${downloads}.${Math.abs(hash % 10)}K`,
-    likes: `${likes}.${Math.abs(hash % 10)}K`,
-    views: `${views}.${Math.abs(hash % 10)}K`,
-    featured: Math.abs(hash % 3) === 0, // ~33% chance of being featured
-    resolutions: [
-      { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
-      { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
-      { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
-      { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
-    ],
-    colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"], // Default colors
-    uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
-    author: "WallpaperHub",
-    tags: wallpaper.tags || []
-  }
-}
 
 interface WallpaperPageProps {
   params: Promise<{
@@ -75,10 +44,12 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
     }
 
     // Find wallpaper by the short ID (last 8 characters of UUID)
-    // Query all wallpapers and filter by short ID in JavaScript to avoid PostgreSQL UUID operator issues
+    // For now, get a limited set of wallpapers and filter in JavaScript for compatibility
     const { data: allWallpapers, error } = await supabase
       .from('wallpapers')
       .select('*')
+      .limit(100) // Limit to recent wallpapers to avoid performance issues
+      .order('created_at', { ascending: false })
     
     if (error) {
       console.error('Error fetching wallpapers:', error)
@@ -94,7 +65,7 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
 
     // Get the exact wallpaper (should only be one with matching short ID)
     const wallpaperData = wallpapers[0]
-    const wallpaper = addMockStats(wallpaperData)
+    const wallpaper = wallpaperData as WallpaperWithStats
 
     // Generate canonical slug for this wallpaper
     const canonicalSlug = generateWallpaperSlug(wallpaper)
@@ -178,11 +149,13 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
       }
     }
 
-    // Find wallpaper by the short ID
-    // Query all wallpapers and filter by short ID in JavaScript to avoid PostgreSQL UUID operator issues
+    // Find wallpaper by the short ID  
+    // For now, get a limited set of wallpapers and filter in JavaScript for compatibility
     const { data: allWallpapers, error } = await supabase
       .from('wallpapers')
       .select('*')
+      .limit(100) // Limit to recent wallpapers to avoid performance issues
+      .order('created_at', { ascending: false })
     
     if (error) {
       return {
@@ -202,7 +175,7 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
     }
 
     const wallpaperData = wallpapers[0]
-    const wallpaper = addMockStats(wallpaperData)
+    const wallpaper = wallpaperData as WallpaperWithStats
 
     const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`
     const title = `${wallpaper.title} - Free ${wallpaper.category} Wallpaper | WallpaperHub`

@@ -8,35 +8,59 @@ import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
 import { generateWallpaperSlug } from "@/lib/slug-utils"
 
-// Helper function to add mock stats to wallpapers for UI compatibility
-function addMockStats(wallpaper: any): WallpaperWithStats {
-  // Generate consistent mock data based on wallpaper ID
-  const id = wallpaper.id
-  const hash = id.split('').reduce((a: number, b: string) => {
-    a = ((a << 5) - a) + b.charCodeAt(0)
-    return a & a
-  }, 0)
-  
-  const downloads = Math.abs(hash % 50) + 5 // 5-55K downloads
-  const likes = Math.abs(hash % 10) + 1 // 1-11K likes
-  const views = downloads * 3 + Math.abs(hash % 20) // Views based on downloads
-  
-  return {
-    ...wallpaper,
-    downloads: `${downloads}.${Math.abs(hash % 10)}K`,
-    likes: `${likes}.${Math.abs(hash % 10)}K`,
-    views: `${views}.${Math.abs(hash % 10)}K`,
-    featured: Math.abs(hash % 3) === 0, // ~33% chance of being featured
-    resolutions: [
-      { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
-      { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
-      { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
-      { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
-    ],
-    colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"], // Default colors
-    uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
-    author: "WallpaperHub"
+// Helper function to format numbers for display
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`
   }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`
+  }
+  return num.toString()
+}
+
+// Helper function to add real stats to wallpapers
+async function addRealStats(wallpapers: any[]): Promise<WallpaperWithStats[]> {
+  // Get all wallpaper IDs
+  const wallpaperIds = wallpapers.map(w => w.id)
+  
+  // Fetch stats for all wallpapers in one query
+  const { data: allStats } = await supabase
+    .from('wallpaper_stats')
+    .select('*')
+    .in('wallpaper_id', wallpaperIds)
+
+  // Create a map of stats by wallpaper_id for quick lookup
+  const statsMap = new Map()
+  allStats?.forEach(stat => {
+    statsMap.set(stat.wallpaper_id, stat)
+  })
+
+  // Add stats to each wallpaper
+  return wallpapers.map(wallpaper => {
+    const stats = statsMap.get(wallpaper.id)
+    const downloads = stats?.downloads || 0
+    const likes = stats?.likes || 0
+    const views = stats?.views || 0
+    
+    return {
+      ...wallpaper,
+      stats,
+      downloads: formatNumber(downloads),
+      likes: formatNumber(likes),
+      views: formatNumber(views),
+      featured: views > 100, // Mark as featured if it has significant views
+      resolutions: [
+        { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
+        { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
+        { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
+        { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
+      ],
+      colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"], // Default colors
+      uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+      author: "WallpaperHub"
+    }
+  })
 }
 
 export const metadata: Metadata = {
@@ -68,15 +92,17 @@ export default async function PopularPage() {
     )
   }
 
-  // Add mock stats and filter out invalid entries
-  const allWallpapers = (wallpapers || [])
+  // Filter out invalid entries
+  const validWallpapers = (wallpapers || [])
     .filter(wallpaper => wallpaper.id && wallpaper.title && wallpaper.image_url)
-    .map(wallpaper => addMockStats(wallpaper))
+
+  // Add real stats from database
+  const allWallpapers = await addRealStats(validWallpapers)
   
-  // Sort by popularity (using mock stats for now)
+  // Sort by popularity (using real stats from database)
   const popularWallpapers = allWallpapers.sort((a, b) => {
-    const popularityA = parseFloat(a.likes.replace('K', '')) + parseFloat(a.views.replace('K', ''))
-    const popularityB = parseFloat(b.likes.replace('K', '')) + parseFloat(b.views.replace('K', ''))
+    const popularityA = (a.stats?.likes || 0) + (a.stats?.views || 0)
+    const popularityB = (b.stats?.likes || 0) + (b.stats?.views || 0)
     return popularityB - popularityA
   })
 

@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { Download, Heart, Eye, Grid3X3, List, Search } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { WallpaperWithStats } from "@/lib/database.types"
+import Link from "next/link"
+import { generateWallpaperSlug } from "@/lib/slug-utils"
+import { WallpaperInteractions } from "./wallpaper-interactions"
+import { OptimizedImage } from "./optimized-image"
 
 interface SearchResultsProps {
   query: string
@@ -19,109 +23,83 @@ interface SearchResultsProps {
   }
 }
 
-const mockResults = [
-  {
-    id: 1,
-    title: "Mountain Sunrise",
-    category: "Nature",
-    downloads: "12.5K",
-    likes: "2.1K",
-    image: "/mountain-sunrise-landscape-mobile-wallpaper.png",
-    resolution: "4K",
-    orientation: "portrait",
-    colors: ["orange", "blue"],
-  },
-  {
-    id: 2,
-    title: "Abstract Waves",
-    category: "Abstract",
-    downloads: "8.3K",
-    likes: "1.8K",
-    image: "/abstract-colorful-waves-mobile-wallpaper.png",
-    resolution: "2K",
-    orientation: "portrait",
-    colors: ["purple", "blue"],
-  },
-  {
-    id: 3,
-    title: "Minimalist Geometry",
-    category: "Minimalist",
-    downloads: "15.2K",
-    likes: "3.4K",
-    image: "/minimalist-geometric-shapes-mobile-wallpaper.png",
-    resolution: "4K",
-    orientation: "portrait",
-    colors: ["white", "black"],
-  },
-  {
-    id: 4,
-    title: "Ocean Depths",
-    category: "Nature",
-    downloads: "9.7K",
-    likes: "2.3K",
-    image: "/deep-ocean-underwater-mobile-wallpaper.png",
-    resolution: "Full HD",
-    orientation: "portrait",
-    colors: ["blue", "green"],
-  },
-  {
-    id: 5,
-    title: "Neon City Nights",
-    category: "Urban",
-    downloads: "25.3K",
-    likes: "4.2K",
-    image: "/neon-city-nights-cyberpunk-mobile-wallpaper.png",
-    resolution: "4K",
-    orientation: "portrait",
-    colors: ["purple", "pink"],
-  },
-  {
-    id: 6,
-    title: "Serene Lake",
-    category: "Nature",
-    downloads: "22.1K",
-    likes: "3.8K",
-    image: "/serene-lake-reflection-mobile-wallpaper.png",
-    resolution: "2K",
-    orientation: "portrait",
-    colors: ["blue", "green"],
-  },
-]
+interface SearchResponse {
+  wallpapers: WallpaperWithStats[]
+  totalCount: number
+  hasMore: boolean
+  query: string | null
+  filters: any
+}
 
 export function SearchResults({ query, filters }: SearchResultsProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [resultsPerPage, setResultsPerPage] = useState("24")
+  const [searchResults, setSearchResults] = useState<SearchResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Filter results based on search query and filters
-  const filteredResults = mockResults.filter((wallpaper) => {
-    const matchesQuery =
-      !query ||
-      wallpaper.title.toLowerCase().includes(query.toLowerCase()) ||
-      wallpaper.category.toLowerCase().includes(query.toLowerCase())
+  // Fetch search results
+  useEffect(() => {
+    const fetchResults = async () => {
+      setIsLoading(true)
+      setError(null)
 
-    const matchesCategory = !filters.category || wallpaper.category === filters.category
-    const matchesResolution = !filters.resolution || wallpaper.resolution.toLowerCase().includes(filters.resolution)
-    const matchesOrientation = !filters.orientation || wallpaper.orientation === filters.orientation
-    const matchesColor = !filters.color || wallpaper.colors.includes(filters.color)
+      try {
+        const searchParams = new URLSearchParams()
+        if (query) searchParams.append('q', query)
+        if (filters.category) searchParams.append('category', filters.category)
+        if (filters.resolution) searchParams.append('resolution', filters.resolution)
+        if (filters.orientation) searchParams.append('orientation', filters.orientation)
+        if (filters.color) searchParams.append('color', filters.color)
+        if (filters.sortBy) searchParams.append('sort', filters.sortBy)
+        searchParams.append('limit', resultsPerPage)
 
-    return matchesQuery && matchesCategory && matchesResolution && matchesOrientation && matchesColor
-  })
+        const response = await fetch(`/api/search?${searchParams}`)
+        const data = await response.json()
 
-  // Sort results
-  const sortedResults = [...filteredResults].sort((a, b) => {
-    switch (filters.sortBy) {
-      case "recent":
-        return b.id - a.id // Assuming higher ID = more recent
-      case "downloads":
-        return Number.parseFloat(b.downloads.replace("K", "")) - Number.parseFloat(a.downloads.replace("K", ""))
-      case "likes":
-        return Number.parseFloat(b.likes.replace("K", "")) - Number.parseFloat(a.likes.replace("K", ""))
-      case "trending":
-        return Math.random() - 0.5 // Random for demo
-      default: // popular
-        return Number.parseFloat(b.downloads.replace("K", "")) - Number.parseFloat(a.downloads.replace("K", ""))
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch search results')
+        }
+
+        setSearchResults(data)
+      } catch (err) {
+        console.error('Search error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to search wallpapers')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  })
+
+    fetchResults()
+  }, [query, filters, resultsPerPage])
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Searching wallpapers...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2 text-red-600">Search Error</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const results = searchResults?.wallpapers || []
 
   return (
     <div className="space-y-6">
@@ -129,7 +107,7 @@ export function SearchResults({ query, filters }: SearchResultsProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">
-            {sortedResults.length} wallpapers found
+            {results.length} wallpapers found
             {query && <span className="text-muted-foreground"> for "{query}"</span>}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -177,7 +155,7 @@ export function SearchResults({ query, filters }: SearchResultsProps) {
       </div>
 
       {/* No Results */}
-      {sortedResults.length === 0 && (
+      {results.length === 0 && (
         <div className="text-center py-12">
           <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No wallpapers found</h3>
@@ -189,84 +167,101 @@ export function SearchResults({ query, filters }: SearchResultsProps) {
       )}
 
       {/* Results Grid */}
-      {sortedResults.length > 0 && (
+      {results.length > 0 && (
         <div
           className={
             viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "space-y-4"
           }
         >
-          {sortedResults.map((wallpaper) => (
-            <Card
+          {results.map((wallpaper) => (
+            <Link
               key={wallpaper.id}
-              className={`group overflow-hidden hover:shadow-lg transition-all duration-300 ${
-                viewMode === "list" ? "flex" : ""
-              }`}
+              href={`/wallpaper/${generateWallpaperSlug(wallpaper.id, wallpaper.title)}`}
             >
-              <CardContent className={`p-0 ${viewMode === "list" ? "flex w-full" : ""}`}>
-                {/* Image Container */}
-                <div
-                  className={`relative overflow-hidden ${
-                    viewMode === "list" ? "w-32 h-32 flex-shrink-0" : "aspect-[3/4]"
-                  }`}
-                >
-                  <img
-                    src={wallpaper.image || "/placeholder.svg"}
-                    alt={wallpaper.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+              <Card
+                className={`group overflow-hidden hover:shadow-lg transition-all duration-300 ${
+                  viewMode === "list" ? "flex" : ""
+                }`}
+              >
+                <CardContent className={`p-0 ${viewMode === "list" ? "flex w-full" : ""}`}>
+                  {/* Image Container */}
+                  <div
+                    className={`relative overflow-hidden ${
+                      viewMode === "list" ? "w-32 h-32 flex-shrink-0" : "aspect-[3/4]"
+                    }`}
+                  >
+                    <OptimizedImage
+                      src={wallpaper.image_url || "/placeholder.svg"}
+                      thumbnailSrc={wallpaper.thumbnail_url || undefined}
+                      mediumSrc={wallpaper.medium_url || undefined}
+                      largeSrc={wallpaper.large_url || undefined}
+                      originalSrc={wallpaper.original_url || undefined}
+                      alt={wallpaper.title}
+                      fill
+                      className="group-hover:scale-105 transition-transform duration-300"
+                      sizes={viewMode === "list" ? "128px" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
+                    />
 
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
 
-                  {/* Simple overlay for desktop hover */}
-                  <div className="absolute inset-0 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="bg-black/50 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                      Tap to View & Download
+                    {/* Simple overlay for desktop hover */}
+                    <div className="absolute inset-0 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="bg-black/50 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        Tap to View & Download
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Content */}
-                <div className={`p-4 ${viewMode === "list" ? "flex-1" : ""}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-base truncate">{wallpaper.title}</h3>
-                    <Badge variant="outline" className="text-xs">
-                      {wallpaper.category}
-                    </Badge>
-                  </div>
-
-                  {viewMode === "list" && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {wallpaper.resolution}
+                  {/* Content */}
+                  <div className={`p-4 ${viewMode === "list" ? "flex-1" : ""}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-base truncate">{wallpaper.title}</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {wallpaper.category}
                       </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {wallpaper.orientation}
-                      </Badge>
                     </div>
-                  )}
 
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center space-x-4">
-                      <span className="flex items-center space-x-1">
-                        <Download className="h-3 w-3" />
-                        <span>{wallpaper.downloads}</span>
-                      </span>
-                      <span className="flex items-center space-x-1">
-                        <Heart className="h-3 w-3" />
-                        <span>{wallpaper.likes}</span>
-                      </span>
+                    {viewMode === "list" && (
+                      <div className="flex items-center gap-2 mb-2">
+                        {wallpaper.tags?.includes('4K') && (
+                          <Badge variant="secondary" className="text-xs">4K</Badge>
+                        )}
+                        {wallpaper.tags?.includes('2K') && (
+                          <Badge variant="secondary" className="text-xs">2K</Badge>
+                        )}
+                        {wallpaper.tags?.includes('portrait') && (
+                          <Badge variant="secondary" className="text-xs">Portrait</Badge>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-4">
+                        <span className="flex items-center space-x-1">
+                          <Download className="h-3 w-3" />
+                          <span>{wallpaper.downloads}</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <Heart className="h-3 w-3" />
+                          <span>{wallpaper.likes}</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <Eye className="h-3 w-3" />
+                          <span>{wallpaper.views}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
 
       {/* Load More */}
-      {sortedResults.length > 0 && (
+      {searchResults?.hasMore && (
         <div className="text-center pt-8">
           <Button variant="outline" size="lg">
             Load More Wallpapers

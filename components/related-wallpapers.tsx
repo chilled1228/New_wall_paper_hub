@@ -3,16 +3,36 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Download, Heart, Eye } from "lucide-react"
 import Link from "next/link"
-import { fetchRelatedWallpapers } from "@/lib/wallpapers"
+import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
 import { generateAltText } from "@/lib/seo-utils"
 import { generateWallpaperSlug } from "@/lib/slug-utils"
+import { OptimizedImage } from "./optimized-image"
 
 interface RelatedWallpapersProps {
   currentWallpaper: WallpaperWithStats
 }
 export async function RelatedWallpapers({ currentWallpaper }: RelatedWallpapersProps) {
-  const relatedWallpapers = await fetchRelatedWallpapers(currentWallpaper, 8)
+  // Fetch related wallpapers directly from Supabase to avoid API timeout issues
+  let relatedWallpapers: WallpaperWithStats[] = []
+  
+  try {
+    const { data: wallpapers, error } = await supabase
+      .from('wallpapers')
+      .select('*')
+      .eq('category', currentWallpaper.category)
+      .neq('id', currentWallpaper.id) // Exclude current wallpaper
+      .limit(8)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('Error fetching related wallpapers:', error)
+    } else {
+      relatedWallpapers = wallpapers || []
+    }
+  } catch (error) {
+    console.error('Error fetching related wallpapers:', error)
+  }
 
   if (relatedWallpapers.length === 0) {
     return null
@@ -40,10 +60,11 @@ export async function RelatedWallpapers({ currentWallpaper }: RelatedWallpapersP
                 <CardContent className="p-0">
                   {/* Image Container */}
                   <div className="relative aspect-[3/4] overflow-hidden">
-                    <img
-                      src={wallpaper.image_url || "/placeholder.svg"}
+                    <OptimizedImage
+                      wallpaper={wallpaper}
                       alt={generateAltText(wallpaper, 'thumbnail')}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      priority={false}
                     />
 
                     {/* Overlay */}
