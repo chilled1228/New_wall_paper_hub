@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -48,6 +48,25 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
   useEffect(() => {
     setIsHydrated(true)
   }, [])
+
+  // Prevent rendering interactive elements on server
+  if (!isHydrated) {
+    return (
+      <section className="py-4 sm:py-8">
+        <div className="container mx-auto px-4 max-w-md sm:max-w-2xl">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-20"></div>
+            <div className="aspect-[9/16] sm:aspect-[3/4] w-full bg-gray-200 rounded-lg"></div>
+            <div className="space-y-3">
+              <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto"></div>
+              <div className="h-6 bg-gray-200 rounded w-1/4 mx-auto"></div>
+              <div className="h-12 bg-gray-200 rounded w-full"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   // Check if user has already liked this wallpaper after hydration
   useEffect(() => {

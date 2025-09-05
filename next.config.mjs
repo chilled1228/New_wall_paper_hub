@@ -1,10 +1,32 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Fix CSS loading issues and webpack errors
+  outputFileTracingRoot: process.cwd(),
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
+  },
+  // Webpack configuration to prevent module resolution issues
+  webpack: (config, { dev, isServer }) => {
+    // Fix for webpack module resolution errors
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    }
+    
+    // Prevent webpack from watching files that can cause issues
+    if (dev && !isServer) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: ['**/node_modules/**', '**/.git/**', '**/.next/**'],
+      }
+    }
+    
+    return config
   },
   images: {
     unoptimized: true,

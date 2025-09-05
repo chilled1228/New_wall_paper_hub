@@ -210,10 +210,33 @@ export async function deletePost(id: string): Promise<boolean> {
 }
 
 export async function incrementViews(id: string): Promise<void> {
-  const { error } = await supabase
-    .rpc('increment_blog_views', { post_id: id })
+  try {
+    // First get the current views count
+    const { data: currentPost, error: fetchError } = await supabase
+      .from('blog_posts')
+      .select('views')
+      .eq('id', id)
+      .single()
 
-  if (error) {
+    if (fetchError) {
+      console.error('Error fetching current views:', fetchError)
+      return
+    }
+
+    // Increment and update
+    const newViews = (currentPost?.views || 0) + 1
+    const { error } = await supabase
+      .from('blog_posts')
+      .update({ 
+        views: newViews,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error incrementing views:', error)
+    }
+  } catch (error) {
     console.error('Error incrementing views:', error)
   }
 }
