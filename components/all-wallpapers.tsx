@@ -1,12 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Download, Heart, Eye, Clock } from "lucide-react"
-import Link from "next/link"
+import { Clock } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
-import { generateWallpaperSlug } from "@/lib/slug-utils"
-import { OptimizedImage } from "./optimized-image"
+import { WallpaperCard } from "@/components/wallpaper-card"
 
 // Helper function to format numbers for display
 function formatNumber(num: number): string {
@@ -89,85 +86,65 @@ export async function AllWallpapers() {
   const allWallpapers = (wallpapers || [])
     .filter(wallpaper => wallpaper.id && wallpaper.title && wallpaper.image_url)
   
+  // Add stats to wallpapers
+  const wallpapersWithStats = await addRealStats(allWallpapers)
+  
   // Sort by creation date (newest first)
-  const sortedWallpapers = allWallpapers.sort((a, b) => {
+  const sortedWallpapers = wallpapersWithStats.sort((a, b) => {
     const dateA = new Date(a.created_at || 0)
     const dateB = new Date(b.created_at || 0)
     return dateB.getTime() - dateA.getTime()
   })
 
   return (
-    <section className="py-16 lg:py-24">
+    <section className="py-16 lg:py-24 bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-3 sm:px-4 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-4">All Wallpapers</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Browse our complete collection of wallpapers, from newest to oldest
-          </p>
-          <div className="flex items-center justify-center mt-4 text-primary">
+        <div className="text-center mb-16">
+          <div className="space-y-4">
+            <h2 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+              All Wallpapers
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Browse our complete collection of stunning wallpapers, freshly updated
+            </p>
+          </div>
+          <div className="flex items-center justify-center mt-6 text-primary bg-primary/10 px-4 py-2 rounded-full border border-primary/20 w-fit mx-auto">
             <Clock className="h-5 w-5 mr-2" />
             <span className="font-medium">Sorted by newest first</span>
           </div>
         </div>
 
-        {/* Wallpapers Grid - Mobile Optimized */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
-          {sortedWallpapers.map((wallpaper) => (
-            <Link key={wallpaper.id} href={`/wallpaper/${generateWallpaperSlug(wallpaper)}`}>
-              <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300">
-                <CardContent className="p-0">
-                  {/* Image Container - Mobile First */}
-                  <div className="relative aspect-[9/16] sm:aspect-[3/4] overflow-hidden">
-                    <img
-                      src={wallpaper.image_url || "/placeholder.svg"}
-                      alt={wallpaper.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
-
-                    {/* Category Badge - Top Right on Mobile */}
-                    <Badge className="absolute top-2 right-2 bg-black/60 text-white text-xs border-0">
-                      {wallpaper.category}
-                    </Badge>
-
-                    {/* Simple overlay for desktop hover */}
-                    <div className="absolute inset-0 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="bg-black/50 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                        Tap to View & Download
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Content - Minimal for Mobile */}
-                  <div className="p-2 sm:p-3">
-                    <h3 className="font-medium text-sm sm:text-base truncate mb-1">{wallpaper.title}</h3>
-                    
-                    {/* Stats - Hidden on small mobile, shown on larger screens */}
-                    <div className="hidden sm:flex items-center justify-between text-xs text-muted-foreground">
-                      <span className="flex items-center space-x-1">
-                        <Download className="h-3 w-3" />
-                        <span>{wallpaper.downloads}</span>
-                      </span>
-                      <span className="flex items-center space-x-1">
-                        <Heart className="h-3 w-3" />
-                        <span>{wallpaper.likes}</span>
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+        {/* Wallpapers Grid - Responsive Design */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
+          {sortedWallpapers.map((wallpaper, index) => (
+            <WallpaperCard 
+              key={wallpaper.id}
+              wallpaper={wallpaper}
+              variant="compact"
+              priority={index < 10}
+            />
           ))}
         </div>
 
-        {/* Show total count */}
-        <div className="text-center mt-12">
-          <p className="text-muted-foreground">
-            Showing {sortedWallpapers.length} wallpapers
-          </p>
+        {/* Statistics and Load More */}
+        <div className="text-center mt-16 space-y-6">
+          <div className="bg-muted/50 rounded-2xl p-6 max-w-md mx-auto">
+            <p className="text-lg font-semibold text-foreground mb-2">
+              {sortedWallpapers.length} Beautiful Wallpapers
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Updated daily with fresh content
+            </p>
+          </div>
+          
+          <Button 
+            size="lg" 
+            variant="outline"
+            className="px-8 py-3 rounded-full transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl"
+          >
+            Load More Wallpapers
+          </Button>
         </div>
       </div>
     </section>

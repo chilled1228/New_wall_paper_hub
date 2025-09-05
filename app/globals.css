@@ -35,7 +35,7 @@
     --chart-3: 33 14% 70%;            /* Darker beige */
     --chart-4: 18 80% 45%;            /* Darker orange */
     --chart-5: 218 25% 35%;           /* Darker blue-gray */
-    --radius: 0.5rem;
+    --radius: 0rem;
   }
   .dark {
     /* Dark Theme Colors - Adapted for brand palette */
@@ -75,9 +75,9 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Enhanced typography hierarchy for flat design */
+  /* Enhanced typography hierarchy with Poppins for headings */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight;
+    @apply font-poppins font-bold tracking-tight;
   }
 
   h1 {
@@ -94,6 +94,11 @@
 
   h4 {
     @apply text-lg md:text-xl leading-snug mb-2 font-semibold;
+  }
+
+  /* Body text with Roboto */
+  body {
+    @apply font-roboto;
   }
 
   /* Enhanced paragraph spacing */
@@ -182,20 +187,20 @@
     @apply px-4 py-6 md:px-6 md:py-8;
   }
 
-  /* Flat design utilities */
-  .flat-card {
+  /* Square design utilities - no rounded corners */
+  .square-card {
     @apply bg-white dark:bg-brand-blue-gray/20 border border-brand-beige dark:border-brand-blue-gray/30;
   }
 
-  .flat-button-primary {
-    @apply bg-brand-orange text-white hover:bg-brand-orange/90 border-0;
+  .square-button-primary {
+    @apply bg-brand-orange text-white hover:bg-brand-orange/90 border-0 font-poppins;
   }
 
-  .flat-button-secondary {
-    @apply bg-brand-beige text-brand-blue-gray hover:bg-brand-beige/80 border border-brand-blue-gray/20;
+  .square-button-secondary {
+    @apply bg-brand-beige text-brand-blue-gray hover:bg-brand-beige/80 border border-brand-blue-gray/20 font-poppins;
   }
 
-  .flat-section-accent {
+  .square-section-accent {
     @apply bg-brand-beige/30 dark:bg-brand-blue-gray/10;
   }
 
@@ -431,6 +436,27 @@ article .blog-content strong {
 .blog-content ul + p,
 .blog-content ol + p {
   @apply mt-6;
+}
+
+/* Modern square UI enhancements - no rounded corners */
+.card-square {
+  @apply bg-card/95 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-2xl transition-all duration-300;
+}
+
+.gradient-border-square {
+  @apply bg-gradient-to-r from-primary/20 to-accent/20 p-[1px];
+}
+
+.text-gradient {
+  @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+}
+
+.hover-lift {
+  @apply transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl;
+}
+
+.modern-button-square {
+  @apply bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white px-6 py-3 shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 font-poppins font-medium;
 }
 
 /* Responsive typography */

@@ -31,14 +31,14 @@ function formatNumber(num: number): string {
   return num.toString()
 }
 
-// Helper function to add stats to a single wallpaper
+// Helper function to add stats to a single wallpaper with better performance
 async function addWallpaperStats(wallpaper: any): Promise<WallpaperWithStats> {
-  // Fetch stats for this wallpaper
+  // Fetch stats for this wallpaper in a single optimized query
   const { data: stats } = await supabase
     .from('wallpaper_stats')
-    .select('*')
+    .select('downloads, likes, views')
     .eq('wallpaper_id', wallpaper.id)
-    .single()
+    .maybeSingle() // Use maybeSingle for better performance when expecting 0 or 1 results
 
   const downloads = stats?.downloads || 0
   const likes = stats?.likes || 0  
@@ -63,6 +63,31 @@ async function addWallpaperStats(wallpaper: any): Promise<WallpaperWithStats> {
   }
 }
 
+// Optimized function to get wallpaper by short ID with single query
+async function getWallpaperByShortId(shortId: string): Promise<any> {
+  // Use a more efficient query - search in database rather than fetching all
+  const { data: wallpapers, error } = await supabase
+    .from('wallpapers')
+    .select('*')
+    .filter('id', 'like', `%${shortId}`)
+    .limit(5) // Minimal limit since short IDs should be unique
+    .single() // This will error if more than one result, which is good for uniqueness
+    
+  if (error) {
+    // Fallback to the old method only if needed
+    const { data: fallbackWallpapers } = await supabase
+      .from('wallpapers')
+      .select('*')
+      .limit(50)
+      .order('created_at', { ascending: false })
+      
+    const filtered = fallbackWallpapers?.filter(w => w.id.endsWith(shortId)) || []
+    return filtered[0] || null
+  }
+  
+  return wallpapers
+}
+
 
 interface WallpaperPageProps {
   params: Promise<{
@@ -85,28 +110,12 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
       notFound()
     }
 
-    // Get a reasonable number of wallpapers and filter in JavaScript
-    // This is actually faster than complex SQL operations on UUID fields
-    const { data: allWallpapers, error } = await supabase
-      .from('wallpapers')
-      .select('*')
-      .limit(50) // Reduced from 100 for better performance
-      .order('created_at', { ascending: false })
+    // Get wallpaper using optimized query
+    const wallpaperData = await getWallpaperByShortId(shortId)
     
-    if (error) {
-      console.error('Error fetching wallpaper:', error)
+    if (!wallpaperData) {
       notFound()
     }
-    
-    // Filter for wallpapers whose ID ends with the short ID
-    const wallpapers = allWallpapers?.filter(w => w.id.endsWith(shortId)) || []
-
-    if (wallpapers.length === 0) {
-      notFound()
-    }
-
-    // Get the exact wallpaper (should only be one with matching short ID)
-    const wallpaperData = wallpapers[0]
     
     // Add stats and additional data to the wallpaper
     const wallpaperWithStats = await addWallpaperStats(wallpaperData)
@@ -171,7 +180,7 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
 //   }
 // }
 
-// Generate metadata for each wallpaper
+// Generate metadata for each wallpaper - OPTIMIZED VERSION
 export async function generateMetadata({ params }: WallpaperPageProps): Promise<Metadata> {
   try {
     const { slug } = await params
@@ -193,32 +202,16 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
       }
     }
 
-    // Get a reasonable number of wallpapers and filter in JavaScript
-    // This is actually faster than complex SQL operations on UUID fields
-    const { data: allWallpapers, error } = await supabase
-      .from('wallpapers')
-      .select('*')
-      .limit(50) // Reduced from 100 for better performance
-      .order('created_at', { ascending: false })
+    // Use the same optimized query as the main component
+    const wallpaperData = await getWallpaperByShortId(shortId)
     
-    if (error) {
-      return {
-        title: "Wallpaper Not Found | WallpaperHub",
-        description: "The requested wallpaper could not be found.",
-      }
-    }
-    
-    // Filter for wallpapers whose ID ends with the short ID
-    const wallpapers = allWallpapers?.filter(w => w.id.endsWith(shortId)) || []
-
-    if (wallpapers.length === 0) {
+    if (!wallpaperData) {
       return {
         title: "Wallpaper Not Found | WallpaperHub",
         description: "The requested wallpaper could not be found.",
       }
     }
 
-    const wallpaperData = wallpapers[0]
     const wallpaper = await addWallpaperStats(wallpaperData) as WallpaperWithStats
 
     const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`

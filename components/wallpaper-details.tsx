@@ -11,37 +11,37 @@ interface WallpaperDetailsProps {
   wallpaper: {
     id: string
     title: string
-    description: string
+    description: string | null
     category: string
-    tags: string[]
-    downloads: string
-    likes: string
-    views: string
+    tags: string[] | null
+    downloads?: string
+    likes?: string
+    views?: string
     image_url: string
-    thumbnail_url?: string
-    medium_url?: string
-    large_url?: string
-    original_url?: string
-    resolutions: Array<{
+    thumbnail_url?: string | null
+    medium_url?: string | null
+    large_url?: string | null
+    original_url?: string | null
+    resolutions?: Array<{
       label: string
       width: number
       height: number
       size: string
     }>
-    colors: string[]
-    uploadDate: string
-    author: string
-    featured: boolean
+    colors?: string[]
+    uploadDate?: string
+    author?: string
+    featured?: boolean
   }
 }
 
 export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
   const [isLiked, setIsLiked] = useState(false)
   const [isLiking, setIsLiking] = useState(false)
-  const [likeCount, setLikeCount] = useState(parseInt(wallpaper.likes) || 0)
+  const [likeCount, setLikeCount] = useState(parseInt(wallpaper.likes || '0') || 0)
   const [isHydrated, setIsHydrated] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [downloadCount, setDownloadCount] = useState(parseInt(wallpaper.downloads) || 0)
+  const [downloadCount, setDownloadCount] = useState(parseInt(wallpaper.downloads || '0') || 0)
   const { toast } = useToast()
 
   // Handle hydration
@@ -49,7 +49,76 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
     setIsHydrated(true)
   }, [])
 
-  // Prevent rendering interactive elements on server
+  // Check if user has already liked this wallpaper after hydration - OPTIMIZED
+  useEffect(() => {
+    if (!isHydrated) return
+
+    const checkLikeStatus = async () => {
+      try {
+        // Get or create simple device ID
+        let deviceId = localStorage.getItem('simple_device_id')
+        if (!deviceId) {
+          deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
+          localStorage.setItem('simple_device_id', deviceId)
+        }
+        
+        // Batch both API calls to reduce round trips
+        const [likeResponse, statsResponse] = await Promise.allSettled([
+          fetch(`/api/wallpapers/${wallpaper.id}/like?deviceId=${deviceId}`),
+          fetch(`/api/wallpapers/${wallpaper.id}/stats`)
+        ])
+        
+        // Handle like status
+        if (likeResponse.status === 'fulfilled' && likeResponse.value.ok) {
+          const data = await likeResponse.value.json()
+          
+          // Set state from server data (this is the source of truth)
+          setIsLiked(data.liked)
+          setLikeCount(data.totalLikes)
+          
+          // Update localStorage to match server state
+          let likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
+          if (data.liked && !likedWallpapers.includes(wallpaper.id)) {
+            likedWallpapers.push(wallpaper.id)
+            localStorage.setItem('liked_wallpapers', JSON.stringify(likedWallpapers))
+          } else if (!data.liked && likedWallpapers.includes(wallpaper.id)) {
+            const filtered = likedWallpapers.filter((id: string) => id !== wallpaper.id)
+            localStorage.setItem('liked_wallpapers', JSON.stringify(filtered))
+          }
+        } else {
+          // Fallback to localStorage if server request fails
+          const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
+          setIsLiked(likedWallpapers.includes(wallpaper.id))
+        }
+
+        // Handle stats
+        if (statsResponse.status === 'fulfilled' && statsResponse.value.ok) {
+          const statsData = await statsResponse.value.json()
+          if (statsData.downloads !== undefined) {
+            setDownloadCount(statsData.downloads)
+          }
+        }
+      } catch (error) {
+        console.error('Error checking like status:', error)
+        // Fallback to localStorage if error
+        try {
+          const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
+          setIsLiked(likedWallpapers.includes(wallpaper.id))
+        } catch (storageError) {
+          console.error('Error accessing localStorage:', storageError)
+          // Set default state if localStorage fails
+          setIsLiked(false)
+        }
+      }
+    }
+
+    // Only run if wallpaper.id exists
+    if (wallpaper?.id) {
+      checkLikeStatus()
+    }
+  }, [wallpaper?.id, isHydrated])
+
+  // Prevent rendering interactive elements on server - MOVED AFTER HOOKS
   if (!isHydrated) {
     return (
       <section className="py-4 sm:py-8">
@@ -67,67 +136,6 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
       </section>
     )
   }
-
-  // Check if user has already liked this wallpaper after hydration
-  useEffect(() => {
-    if (!isHydrated) return
-
-    const checkLikeStatus = async () => {
-      try {
-        // Get or create simple device ID
-        let deviceId = localStorage.getItem('simple_device_id')
-        if (!deviceId) {
-          deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
-          localStorage.setItem('simple_device_id', deviceId)
-        }
-        
-        // Always sync with server first to get accurate data
-        const response = await fetch(`/api/wallpapers/${wallpaper.id}/like?deviceId=${deviceId}`)
-        
-        if (response.ok) {
-          const data = await response.json()
-          
-          // Set state from server data (this is the source of truth)
-          setIsLiked(data.liked)
-          setLikeCount(data.totalLikes)
-          
-          // Update localStorage to match server state
-          let likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
-          if (data.liked && !likedWallpapers.includes(wallpaper.id)) {
-            likedWallpapers.push(wallpaper.id)
-            localStorage.setItem('liked_wallpapers', JSON.stringify(likedWallpapers))
-          } else if (!data.liked && likedWallpapers.includes(wallpaper.id)) {
-            const filtered = likedWallpapers.filter(id => id !== wallpaper.id)
-            localStorage.setItem('liked_wallpapers', JSON.stringify(filtered))
-          }
-        } else {
-          // Fallback to localStorage if server request fails
-          const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
-          setIsLiked(likedWallpapers.includes(wallpaper.id))
-        }
-
-        // Also get current download count from server
-        try {
-          const statsResponse = await fetch(`/api/wallpapers/${wallpaper.id}/stats`)
-          if (statsResponse.ok) {
-            const statsData = await statsResponse.json()
-            if (statsData.downloads !== undefined) {
-              setDownloadCount(statsData.downloads)
-            }
-          }
-        } catch (error) {
-          console.log('Could not fetch download stats:', error)
-        }
-      } catch (error) {
-        console.error('Error checking like status:', error)
-        // Fallback to localStorage if error
-        const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
-        setIsLiked(likedWallpapers.includes(wallpaper.id))
-      }
-    }
-
-    checkLikeStatus()
-  }, [wallpaper.id, isHydrated])
 
   const handleDownload = async () => {
     if (isDownloading) return // Prevent multiple clicks
@@ -224,7 +232,7 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
       try {
         await navigator.share({
           title: wallpaper.title,
-          text: wallpaper.description,
+          text: wallpaper.description || '',
           url: window.location.href,
         })
       } catch (err) {
@@ -280,7 +288,7 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
         if (data.liked && !likedWallpapers.includes(wallpaper.id)) {
           likedWallpapers.push(wallpaper.id)
         } else if (!data.liked) {
-          likedWallpapers = likedWallpapers.filter(id => id !== wallpaper.id)
+          likedWallpapers = likedWallpapers.filter((id: string) => id !== wallpaper.id)
         }
         localStorage.setItem('liked_wallpapers', JSON.stringify(likedWallpapers))
 
@@ -314,13 +322,23 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
 
         {/* Mobile-First Layout */}
         <div className="space-y-6">
-          {/* Main Image - Full width on mobile */}
+          {/* Main Image - Full width on mobile with optimization */}
           <div className="relative w-full">
             <div className="aspect-[9/16] sm:aspect-[3/4] w-full overflow-hidden rounded-lg">
+              {/* Preload the medium quality image for faster loading */}
               <img
                 src={wallpaper.medium_url || wallpaper.image_url || "/placeholder.svg"}
                 alt={wallpaper.title}
                 className="w-full h-full object-cover"
+                loading="eager" // Load immediately since this is the main image
+                decoding="async" // Non-blocking decode
+                onLoad={() => {
+                  // Preload the high-res version in background for downloads
+                  if (wallpaper.large_url || wallpaper.original_url) {
+                    const highResImage = new Image()
+                    highResImage.src = wallpaper.large_url || wallpaper.original_url || ''
+                  }
+                }}
               />
             </div>
             {wallpaper.featured && (

@@ -8,6 +8,11 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'sans': ['var(--font-sans)'],
+        'poppins': ['var(--font-poppins)', 'sans-serif'],
+        'roboto': ['var(--font-roboto)', 'sans-serif'],
+      },
       colors: {
         'brand-beige': 'hsl(var(--brand-beige))',
         'brand-orange': 'hsl(var(--brand-orange))',

@@ -15,18 +15,24 @@ export async function GET(
       )
     }
 
-    // Get current stats from wallpaper_stats table
+    // Get current stats from wallpaper_stats table with optimized query
     const { data: stats } = await supabase
       .from('wallpaper_stats')
-      .select('*')
+      .select('downloads, likes, views')
       .eq('wallpaper_id', wallpaperId)
-      .single()
+      .maybeSingle() // Use maybeSingle for better performance
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       downloads: stats?.downloads || 0,
       likes: stats?.likes || 0,
       views: stats?.views || 0
     })
+    
+    // Add cache headers
+    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=30')
+    
+    return response
 
   } catch (error) {
     console.error('Error fetching wallpaper stats:', error)

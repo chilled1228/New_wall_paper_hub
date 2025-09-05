@@ -13,13 +13,14 @@ interface RelatedWallpapersProps {
   currentWallpaper: WallpaperWithStats
 }
 export async function RelatedWallpapers({ currentWallpaper }: RelatedWallpapersProps) {
-  // Fetch related wallpapers directly from Supabase to avoid API timeout issues
+  // Fetch related wallpapers directly from Supabase with optimized query
   let relatedWallpapers: WallpaperWithStats[] = []
   
   try {
+    // Only select the fields we actually need for better performance
     const { data: wallpapers, error } = await supabase
       .from('wallpapers')
-      .select('*')
+      .select('id, title, category, description, image_url, thumbnail_url, medium_url, large_url, original_url, created_at')
       .eq('category', currentWallpaper.category)
       .neq('id', currentWallpaper.id) // Exclude current wallpaper
       .limit(8)
@@ -28,7 +29,22 @@ export async function RelatedWallpapers({ currentWallpaper }: RelatedWallpapersP
     if (error) {
       console.error('Error fetching related wallpapers:', error)
     } else {
-      relatedWallpapers = wallpapers || []
+      // Add minimal stats for display (we don't need full stats for related wallpapers)
+      relatedWallpapers = (wallpapers || []).map(wallpaper => ({
+        ...wallpaper,
+        downloads: '0', // Will be loaded on-demand if needed
+        likes: '0',
+        views: '0',
+        featured: false,
+        stats: undefined,
+        resolutions: [],
+        colors: [],
+        uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+        author: "WallpaperHub",
+        tags: [],
+        description: wallpaper.description || '',
+        original_url: wallpaper.original_url || wallpaper.large_url || wallpaper.image_url
+      }))
     }
   } catch (error) {
     console.error('Error fetching related wallpapers:', error)
@@ -61,7 +77,11 @@ export async function RelatedWallpapers({ currentWallpaper }: RelatedWallpapersP
                   {/* Image Container */}
                   <div className="relative aspect-[3/4] overflow-hidden">
                     <OptimizedImage
-                      wallpaper={wallpaper}
+                      src={wallpaper.image_url}
+                      thumbnailSrc={wallpaper.thumbnail_url || undefined}
+                      mediumSrc={wallpaper.medium_url || undefined}
+                      largeSrc={wallpaper.large_url || undefined}
+                      originalSrc={wallpaper.original_url || undefined}
                       alt={generateAltText(wallpaper, 'thumbnail')}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       priority={false}

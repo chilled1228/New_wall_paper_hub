@@ -58,9 +58,10 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid wallpaper ID format' }, { status: 400 })
     }
 
+    // Use optimized query - only select needed fields first
     const { data: wallpaper, error } = await supabase
       .from('wallpapers')
-      .select('*')
+      .select('id, title, description, category, tags, image_url, thumbnail_url, medium_url, large_url, original_url, created_at')
       .eq('id', id)
       .single()
 
@@ -88,7 +89,12 @@ export async function GET(
     // Add real stats from database
     const wallpaperWithStats = await addRealStats(wallpaper)
 
-    return NextResponse.json(wallpaperWithStats)
+    // Add cache headers for better performance
+    const response = NextResponse.json(wallpaperWithStats)
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=60')
+    
+    return response
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json({
