@@ -7,9 +7,10 @@ import type { BlogPost } from '@/lib/blog'
 
 interface BlogCardProps {
   post: BlogPost
+  priority?: boolean
 }
 
-export function BlogCard({ post }: BlogCardProps) {
+export function BlogCard({ post, priority = false }: BlogCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <Link href={`/blog/${post.slug}`}>
@@ -20,6 +21,8 @@ export function BlogCard({ post }: BlogCardProps) {
               alt={post.title}
               fill
               className="object-cover hover:scale-105 transition-transform duration-300"
+              priority={priority}
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
           </div>
         )}

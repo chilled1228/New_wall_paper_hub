@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAllPosts, createPost, generateSlug, calculateReadingTime, extractKeywords } from '@/lib/blog'
 import { getAuthUser } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,6 +59,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+    
+    // No caching - pages are fully dynamic now
     
     return NextResponse.json({ 
       success: true, 

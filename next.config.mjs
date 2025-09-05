@@ -106,20 +106,25 @@ const nextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'public, max-age=3600, immutable',
           },
         ],
       },
       {
-        source: '/_next/static/chunks/(.*)',
+        source: '/blog',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'public, s-maxage=60, stale-while-revalidate=300',
           },
+        ],
+      },
+      {
+        source: '/blog/(.*)',
+        headers: [
           {
-            key: 'ETag',
-            value: 'false',
+            key: 'Cache-Control',
+            value: 'public, s-maxage=300, stale-while-revalidate=3600',
           },
         ],
       },

@@ -8,7 +8,8 @@
     "lint": "next lint",
     "start": "next start",
     "seed": "node scripts/seed-simple.js",
-    "seed:wallpapers": "npx ts-node scripts/seed-wallpapers.ts"
+    "seed:wallpapers": "npx ts-node scripts/seed-wallpapers.ts",
+    "seed:blog": "npx ts-node scripts/seed-blog-posts.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
