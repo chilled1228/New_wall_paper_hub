@@ -1,126 +1,476 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  /* Updated color tokens to match wallpaper website design brief with warm amber/orange palette */
-  --background: oklch(1 0 0); /* #ffffff */
-  --foreground: oklch(0.3 0 0); /* #374151 */
-  --card: oklch(0.99 0.02 85); /* #fefce8 */
-  --card-foreground: oklch(0.3 0 0); /* #374151 */
-  --popover: oklch(1 0 0); /* #ffffff */
-  --popover-foreground: oklch(0.3 0 0); /* #374151 */
-  --primary: oklch(0.65 0.15 55); /* #d97706 */
-  --primary-foreground: oklch(1 0 0); /* #ffffff */
-  --secondary: oklch(0.7 0.18 35); /* #f97316 */
-  --secondary-foreground: oklch(1 0 0); /* #ffffff */
-  --muted: oklch(0.99 0.02 85); /* #fefce8 */
-  --muted-foreground: oklch(0.3 0 0); /* #374151 */
-  --accent: oklch(0.7 0.18 35); /* #f97316 */
-  --accent-foreground: oklch(1 0 0); /* #ffffff */
-  --destructive: oklch(0.6 0.2 25); /* #ea580c */
-  --destructive-foreground: oklch(1 0 0); /* #ffffff */
-  --border: oklch(0.92 0 0); /* #e5e7eb */
-  --input: oklch(0.99 0.02 85); /* #fefce8 */
-  --ring: oklch(0.65 0.15 55 / 0.5); /* rgba(217, 119, 6, 0.5) */
-  --chart-1: oklch(0.65 0.15 55); /* #d97706 */
-  --chart-2: oklch(0.7 0.18 35); /* #f97316 */
-  --chart-3: oklch(0.6 0.2 25); /* #ea580c */
-  --chart-4: oklch(0.25 0.1 220); /* #164e63 */
-  --chart-5: oklch(0.3 0 0); /* #374151 */
-  --radius: 0.5rem;
-  --sidebar: oklch(0.99 0.02 85); /* #fefce8 */
-  --sidebar-foreground: oklch(0.3 0 0); /* #374151 */
-  --sidebar-primary: oklch(0.65 0.15 55); /* #d97706 */
-  --sidebar-primary-foreground: oklch(1 0 0); /* #ffffff */
-  --sidebar-accent: oklch(0.7 0.18 35); /* #f97316 */
-  --sidebar-accent-foreground: oklch(1 0 0); /* #ffffff */
-  --sidebar-border: oklch(0.92 0 0); /* #e5e7eb */
-  --sidebar-ring: oklch(0.65 0.15 55 / 0.5); /* rgba(217, 119, 6, 0.5) */
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
 }
 
-.dark {
-  --background: oklch(0.1 0 0); /* Dark background */
-  --foreground: oklch(0.95 0 0); /* Light text */
-  --card: oklch(0.15 0 0); /* Dark card */
-  --card-foreground: oklch(0.95 0 0); /* Light card text */
-  --popover: oklch(0.1 0 0); /* Dark popover */
-  --popover-foreground: oklch(0.95 0 0); /* Light popover text */
-  --primary: oklch(0.7 0.18 35); /* Brighter orange for dark mode */
-  --primary-foreground: oklch(0.1 0 0); /* Dark text on primary */
-  --secondary: oklch(0.25 0 0); /* Dark secondary */
-  --secondary-foreground: oklch(0.95 0 0); /* Light secondary text */
-  --muted: oklch(0.25 0 0); /* Dark muted */
-  --muted-foreground: oklch(0.7 0 0); /* Muted text */
-  --accent: oklch(0.7 0.18 35); /* Accent orange */
-  --accent-foreground: oklch(0.1 0 0); /* Dark accent text */
-  --destructive: oklch(0.6 0.2 25); /* Destructive red */
-  --destructive-foreground: oklch(0.95 0 0); /* Light destructive text */
-  --border: oklch(0.25 0 0); /* Dark border */
-  --input: oklch(0.25 0 0); /* Dark input */
-  --ring: oklch(0.7 0.18 35 / 0.5); /* Orange ring */
-  --chart-1: oklch(0.7 0.18 35);
-  --chart-2: oklch(0.65 0.15 55);
-  --chart-3: oklch(0.6 0.2 25);
-  --chart-4: oklch(0.4 0.15 220);
-  --chart-5: oklch(0.7 0 0);
-  --sidebar: oklch(0.15 0 0);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.7 0.18 35);
-  --sidebar-primary-foreground: oklch(0.1 0 0);
-  --sidebar-accent: oklch(0.25 0 0);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.25 0 0);
-  --sidebar-ring: oklch(0.7 0.18 35 / 0.5);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
 }
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+@layer base {
+  :root {
+    /* Custom Brand Colors */
+    --brand-beige: 33 14% 90%;        /* #E9E3DF */
+    --brand-orange: 18 100% 59%;      /* #FF7A30 */
+    --brand-blue-gray: 218 32% 46%;   /* #465C88 */
+    --brand-black: 0 0% 0%;           /* #000000 */
+
+    /* Light Theme Colors */
+    --background: 33 14% 96%;         /* Lighter version of beige for main background */
+    --foreground: 0 0% 0%;            /* Black for primary text */
+    --card: 0 0% 100%;                /* White for cards */
+    --card-foreground: 0 0% 0%;       /* Black text on cards */
+    --popover: 0 0% 100%;             /* White for popovers */
+    --popover-foreground: 0 0% 0%;    /* Black text on popovers */
+    --primary: 18 100% 59%;           /* Orange for primary actions */
+    --primary-foreground: 0 0% 100%;  /* White text on orange */
+    --secondary: 33 14% 90%;          /* Beige for secondary elements */
+    --secondary-foreground: 0 0% 0%;  /* Black text on beige */
+    --muted: 33 14% 90%;              /* Beige for muted elements */
+    --muted-foreground: 218 32% 46%;  /* Blue-gray for muted text */
+    --accent: 218 32% 46%;            /* Blue-gray for accents */
+    --accent-foreground: 0 0% 100%;   /* White text on blue-gray */
+    --destructive: 0 84.2% 60.2%;     /* Keep existing red for destructive actions */
+    --destructive-foreground: 0 0% 98%;
+    --border: 33 14% 85%;             /* Darker beige for borders */
+    --input: 33 14% 85%;              /* Darker beige for inputs */
+    --ring: 18 100% 59%;              /* Orange for focus rings */
+    --chart-1: 18 100% 59%;           /* Orange */
+    --chart-2: 218 32% 46%;           /* Blue-gray */
+    --chart-3: 33 14% 70%;            /* Darker beige */
+    --chart-4: 18 80% 45%;            /* Darker orange */
+    --chart-5: 218 25% 35%;           /* Darker blue-gray */
+    --radius: 0.5rem;
+  }
+  .dark {
+    /* Dark Theme Colors - Adapted for brand palette */
+    --background: 218 32% 8%;         /* Very dark blue-gray */
+    --foreground: 33 14% 90%;         /* Beige for text */
+    --card: 218 32% 12%;              /* Dark blue-gray for cards */
+    --card-foreground: 33 14% 90%;    /* Beige text on cards */
+    --popover: 218 32% 12%;           /* Dark blue-gray for popovers */
+    --popover-foreground: 33 14% 90%; /* Beige text on popovers */
+    --primary: 18 100% 59%;           /* Keep orange for primary actions */
+    --primary-foreground: 0 0% 0%;    /* Black text on orange */
+    --secondary: 218 32% 20%;         /* Medium blue-gray for secondary */
+    --secondary-foreground: 33 14% 90%; /* Beige text on secondary */
+    --muted: 218 32% 15%;             /* Dark blue-gray for muted */
+    --muted-foreground: 33 14% 70%;   /* Muted beige for text */
+    --accent: 18 100% 59%;            /* Orange for accents */
+    --accent-foreground: 0 0% 0%;     /* Black text on orange */
+    --destructive: 0 62.8% 30.6%;     /* Keep existing red */
+    --destructive-foreground: 0 0% 98%;
+    --border: 218 32% 25%;            /* Medium blue-gray for borders */
+    --input: 218 32% 20%;             /* Medium blue-gray for inputs */
+    --ring: 18 100% 59%;              /* Orange for focus rings */
+    --chart-1: 18 100% 59%;           /* Orange */
+    --chart-2: 33 14% 70%;            /* Muted beige */
+    --chart-3: 218 32% 35%;           /* Medium blue-gray */
+    --chart-4: 18 80% 45%;            /* Darker orange */
+    --chart-5: 218 25% 55%;           /* Lighter blue-gray */
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Enhanced typography hierarchy for flat design */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl leading-tight mb-6;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl lg:text-4xl leading-tight mb-4;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl leading-snug mb-3;
+  }
+
+  h4 {
+    @apply text-lg md:text-xl leading-snug mb-2 font-semibold;
+  }
+
+  /* Enhanced paragraph spacing */
+  p {
+    @apply leading-relaxed mb-4;
+  }
+
+  /* Section spacing for better visual hierarchy */
+  section {
+    @apply mb-16 md:mb-24;
+  }
+
+  /* Flat button focus states - Clean outline only */
+  button:focus-visible {
+    @apply outline-2 outline-offset-1 outline-brand-orange;
+  }
+
+  /* Flat input focus - Clean outline only */
+  input:focus-visible {
+    @apply outline-2 outline-offset-1 outline-brand-orange;
+  }
+
+  /* Smooth scrolling for anchor links */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Better spacing for sections */
+  section {
+    @apply scroll-mt-20;
+  }
+}
+
+@layer components {
+  /* Flat design text utility - Using brand orange for emphasis */
+  .accent-text {
+    @apply text-brand-orange font-semibold;
+  }
+
+  /* Flat card hover effects - No shadows, just subtle color changes */
+  .card-hover {
+    @apply transition-colors duration-200 hover:bg-brand-beige/50 dark:hover:bg-brand-blue-gray/10;
+  }
+
+  /* Minimal button animations - No scaling, just color transitions */
+  .button-hover {
+    @apply transition-colors duration-200;
+  }
+
+  /* Flat focus rings - Clean outline approach */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-brand-orange focus-visible:outline-offset-1;
+  }
+
+  /* Mobile-optimized touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Screen reader only content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  /* Mobile-friendly spacing */
+  .mobile-spacing {
+    @apply px-4 py-6 md:px-6 md:py-8;
+  }
+
+  /* Flat design utilities */
+  .flat-card {
+    @apply bg-white dark:bg-brand-blue-gray/20 border border-brand-beige dark:border-brand-blue-gray/30;
+  }
+
+  .flat-button-primary {
+    @apply bg-brand-orange text-white hover:bg-brand-orange/90 border-0;
+  }
+
+  .flat-button-secondary {
+    @apply bg-brand-beige text-brand-blue-gray hover:bg-brand-beige/80 border border-brand-blue-gray/20;
+  }
+
+  .flat-section-accent {
+    @apply bg-brand-beige/30 dark:bg-brand-blue-gray/10;
+  }
+
+  /* Better mobile typography */
+  @media (max-width: 768px) {
+    h1 {
+      @apply text-3xl leading-tight;
+    }
+
+    h2 {
+      @apply text-2xl leading-tight;
+    }
+
+    h3 {
+      @apply text-xl leading-snug;
+    }
+
+    /* Larger touch targets on mobile */
+    button, .button {
+      @apply min-h-[48px] px-6;
+    }
+
+    /* Better mobile input sizing */
+    input, textarea {
+      @apply min-h-[48px] text-base;
+    }
+  }
+}
+
+/* Blog Content Styling - Override Tailwind Typography */
+div.blog-content,
+.blog-content.max-w-none,
+article .blog-content {
+  font-size: 1.125rem !important;
+  line-height: 1.75 !important;
+  color: hsl(var(--muted-foreground)) !important;
+  max-width: none !important;
+}
+
+div.blog-content h1,
+.blog-content.max-w-none h1,
+article .blog-content h1 {
+  font-size: 2.5rem !important;
+  font-weight: 700 !important;
+  color: hsl(var(--foreground)) !important;
+  line-height: 1.2 !important;
+  margin-top: 3rem !important;
+  margin-bottom: 2rem !important;
+}
+
+div.blog-content h2,
+.blog-content.max-w-none h2,
+article .blog-content h2 {
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  color: hsl(var(--foreground)) !important;
+  line-height: 1.25 !important;
+  margin-top: 2.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+div.blog-content h3,
+.blog-content.max-w-none h3,
+article .blog-content h3 {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  color: hsl(var(--foreground)) !important;
+  line-height: 1.3 !important;
+  margin-top: 2rem !important;
+  margin-bottom: 1rem !important;
+}
+
+div.blog-content p,
+.blog-content.max-w-none p,
+article .blog-content p {
+  font-size: 1.125rem !important;
+  line-height: 1.75 !important;
+  color: hsl(var(--muted-foreground)) !important;
+  margin-bottom: 1.5rem !important;
+}
+
+div.blog-content ul,
+.blog-content.max-w-none ul,
+article .blog-content ul {
+  list-style-type: disc !important;
+  list-style-position: inside !important;
+  margin-bottom: 1.5rem !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 1.125rem !important;
+}
+
+div.blog-content ol,
+.blog-content.max-w-none ol,
+article .blog-content ol {
+  list-style-type: decimal !important;
+  list-style-position: inside !important;
+  margin-bottom: 1.5rem !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 1.125rem !important;
+}
+
+div.blog-content li,
+.blog-content.max-w-none li,
+article .blog-content li {
+  line-height: 1.75 !important;
+  margin-bottom: 0.5rem !important;
+  font-size: 1.125rem !important;
+}
+
+div.blog-content a,
+.blog-content.max-w-none a,
+article .blog-content a {
+  color: hsl(var(--brand-orange)) !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+}
+
+div.blog-content a:hover,
+.blog-content.max-w-none a:hover,
+article .blog-content a:hover {
+  text-decoration: underline !important;
+}
+
+div.blog-content strong,
+.blog-content.max-w-none strong,
+article .blog-content strong {
+  font-weight: 700 !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.blog-content em {
+  @apply italic;
+}
+
+.blog-content code {
+  @apply bg-brand-beige/20 text-brand-orange px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.blog-content pre {
+  @apply bg-brand-blue-gray/5 border border-border rounded-lg p-4 mb-4 overflow-x-auto;
+}
+
+.blog-content pre code {
+  @apply bg-transparent text-foreground px-0 py-0 rounded-none text-sm;
+}
+
+.blog-content blockquote {
+  @apply border-l-4 border-brand-orange pl-4 italic text-muted-foreground mb-4 bg-brand-beige/10 py-2;
+}
+
+.blog-content img {
+  @apply rounded-lg shadow-md mb-4 max-w-full h-auto;
+}
+
+.blog-content table {
+  @apply w-full border-collapse border border-border mb-4 rounded-lg overflow-hidden;
+}
+
+.blog-content th {
+  @apply border border-border bg-brand-beige/20 p-3 text-left font-semibold text-foreground;
+}
+
+.blog-content td {
+  @apply border border-border p-3 text-muted-foreground;
+}
+
+.blog-content hr {
+  @apply border-0 border-t border-border my-8;
+}
+
+/* First paragraph after headings */
+.blog-content h1 + p,
+.blog-content h2 + p,
+.blog-content h3 + p,
+.blog-content h4 + p,
+.blog-content h5 + p,
+.blog-content h6 + p {
+  @apply mt-0;
+}
+
+/* Remove top margin from first element */
+.blog-content > *:first-child {
+  @apply mt-0;
+}
+
+/* Remove bottom margin from last element */
+.blog-content > *:last-child {
+  @apply mb-0;
+}
+
+/* Better spacing for nested lists */
+.blog-content ul ul,
+.blog-content ol ol,
+.blog-content ul ol,
+.blog-content ol ul {
+  @apply mt-1 mb-1;
+}
+
+/* Better spacing for headings */
+.blog-content h1:not(:first-child),
+.blog-content h2:not(:first-child),
+.blog-content h3:not(:first-child) {
+  @apply mt-12;
+}
+
+.blog-content h4:not(:first-child),
+.blog-content h5:not(:first-child),
+.blog-content h6:not(:first-child) {
+  @apply mt-8;
+}
+
+/* Improve blockquote styling */
+.blog-content blockquote {
+  @apply my-6 py-4;
+}
+
+/* Better table styling */
+.blog-content table {
+  @apply text-sm;
+}
+
+/* Responsive images */
+.blog-content img {
+  @apply mx-auto;
+}
+
+/* Code block improvements */
+.blog-content pre {
+  @apply text-sm leading-relaxed;
+}
+
+/* Better spacing for paragraphs after lists */
+.blog-content ul + p,
+.blog-content ol + p {
+  @apply mt-6;
+}
+
+/* Responsive typography */
+@media (max-width: 768px) {
+  .blog-content {
+    @apply text-base leading-7;
+  }
+  
+  .blog-content h1 {
+    @apply text-3xl mt-12 mb-6;
+  }
+  
+  .blog-content h2 {
+    @apply text-2xl mt-10 mb-5;
+  }
+  
+  .blog-content h3 {
+    @apply text-xl mt-8 mb-4;
+  }
+  
+  .blog-content p {
+    @apply mb-5 leading-7;
+  }
+  
+  .blog-content ul,
+  .blog-content ol {
+    @apply mb-6;
   }
 }
