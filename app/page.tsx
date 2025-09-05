@@ -1,7 +1,4 @@
-import { HeroSection } from "@/components/hero-section"
-import { PopularWallpapers } from "@/components/popular-wallpapers"
-import { AllWallpapers } from "@/components/all-wallpapers"
-import { Categories } from "@/components/categories"
+import { SimpleGallery } from "@/components/simple-gallery"
 import { Footer } from "@/components/footer"
 
 // Force dynamic rendering to ensure real-time data
@@ -12,10 +9,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <main>
-        <HeroSection />
-        <PopularWallpapers />
-        <AllWallpapers />
-        <Categories />
+        <SimpleGallery />
       </main>
       <Footer />
     </div>
