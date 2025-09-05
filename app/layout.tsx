@@ -4,6 +4,7 @@ import { Inter, Poppins, Roboto } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
+import { LoadingBar } from "@/components/loading-bar"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,6 +39,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${poppins.variable} ${roboto.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <LoadingBar />
           <Header />
           {children}
         </ThemeProvider>

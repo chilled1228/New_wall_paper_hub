@@ -1,8 +1,60 @@
 import { WallpaperWithStats } from './database.types'
+import { supabase } from './supabase'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || (process.env.NODE_ENV === 'production' 
-  ? process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : ''
-  : 'http://localhost:3000')
+// Helper function to format numbers for display
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`
+  }
+  return num.toString()
+}
+
+// Helper function to add real stats to wallpapers
+async function addRealStats(wallpapers: any[]): Promise<WallpaperWithStats[]> {
+  // Get all wallpaper IDs
+  const wallpaperIds = wallpapers.map(w => w.id)
+  
+  // Fetch stats for all wallpapers in one query
+  const { data: allStats } = await supabase
+    .from('wallpaper_stats')
+    .select('*')
+    .in('wallpaper_id', wallpaperIds)
+
+  // Create a map of stats by wallpaper_id for quick lookup
+  const statsMap = new Map()
+  allStats?.forEach(stat => {
+    statsMap.set(stat.wallpaper_id, stat)
+  })
+
+  // Add stats to each wallpaper
+  return wallpapers.map(wallpaper => {
+    const stats = statsMap.get(wallpaper.id)
+    const downloads = stats?.downloads || 0
+    const likes = stats?.likes || 0
+    const views = stats?.views || 0
+    
+    return {
+      ...wallpaper,
+      stats,
+      downloads: formatNumber(downloads),
+      likes: formatNumber(likes),
+      views: formatNumber(views),
+      featured: views > 100, // Mark as featured if it has significant views
+      resolutions: [
+        { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
+        { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
+        { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
+        { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
+      ],
+      colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"], // Default colors
+      uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+      author: "WallpaperHub"
+    }
+  })
+}
 
 export interface FetchWallpapersOptions {
   category?: string
@@ -13,72 +65,108 @@ export interface FetchWallpapersOptions {
 
 export async function fetchWallpapers(options: FetchWallpapersOptions = {}): Promise<WallpaperWithStats[]> {
   try {
-    // Validate input parameters
-    if (options.limit && (options.limit < 1 || options.limit > 100)) {
-      console.warn('Invalid limit provided, using default')
-      options.limit = 20
+    // Validate and sanitize inputs
+    const parsedLimit = options.limit ? Math.min(Math.max(options.limit, 1), 100) : 20
+    const sanitizedCategory = options.category?.toLowerCase().trim()
+    const sanitizedSearch = options.search?.trim()
+
+    if (sanitizedSearch && sanitizedSearch.length < 2) {
+      console.warn('Search query must be at least 2 characters')
+      return []
     }
 
-    const params = new URLSearchParams()
+    let query = supabase
+      .from('wallpapers')
+      .select('*')
 
-    if (options.category) params.append('category', options.category.toLowerCase())
-    if (options.featured) params.append('featured', 'true')
-    if (options.limit) params.append('limit', options.limit.toString())
-    if (options.search) params.append('search', options.search.trim())
+    // Apply filters
+    if (sanitizedCategory) {
+      query = query.eq('category', sanitizedCategory)
+    }
 
-    const url = `${API_BASE_URL}/api/wallpapers?${params.toString()}`
-    const response = await fetch(url, {
-      next: {
-        revalidate: 0, // No caching - always fetch fresh data
-        tags: ['wallpapers', ...(options.category ? [`category-${options.category}`] : [])]
-      },
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      },
+    if (sanitizedSearch) {
+      // Escape special characters for ILIKE
+      const escapedSearch = sanitizedSearch.replace(/[%_]/g, '\\$&')
+      query = query.or(`title.ilike.%${escapedSearch}%,description.ilike.%${escapedSearch}%`)
+    }
+
+    // Apply limit
+    query = query.limit(parsedLimit)
+
+    // Order by created_at desc
+    query = query.order('created_at', { ascending: false })
+
+    const { data: wallpapers, error } = await query
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return []
+    }
+
+    // Validate wallpapers data
+    if (!wallpapers || !Array.isArray(wallpapers)) {
+      console.error('Invalid wallpapers data received from database')
+      return []
+    }
+
+    // Validate wallpapers and filter invalid ones
+    const validWallpapers = wallpapers.filter(wallpaper => {
+      if (!wallpaper.id || !wallpaper.title || !wallpaper.image_url) {
+        console.warn('Wallpaper missing required fields:', wallpaper.id)
+        return false
+      }
+      return true
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to fetch wallpapers: ${response.status} ${response.statusText} - ${errorText}`)
+    // Add real stats from database
+    const wallpapersWithStats = await addRealStats(validWallpapers)
+
+    // Filter featured if requested
+    let filteredWallpapers = wallpapersWithStats
+    if (options.featured) {
+      filteredWallpapers = wallpapersWithStats.filter(w => w.featured)
     }
 
-    const data = await response.json()
-
-    // Validate response data
-    if (!Array.isArray(data)) {
-      throw new Error('Invalid response format: expected array')
-    }
-
-    return data
+    return filteredWallpapers
   } catch (error) {
     console.error('Error fetching wallpapers:', error)
-    // Return empty array as fallback
     return []
   }
 }
 
 export async function fetchWallpaperById(id: string): Promise<WallpaperWithStats | null> {
   try {
-    const url = `${API_BASE_URL}/api/wallpapers/${id}`
-    const response = await fetch(url, {
-      next: {
-        revalidate: 0, // No caching - always fetch fresh data
-        tags: [`wallpaper-${id}`] // Add cache tags for selective revalidation
-      },
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
-    })
+    // First try to find by ID
+    let { data: wallpaper, error } = await supabase
+      .from('wallpapers')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null
-      }
-      throw new Error(`Failed to fetch wallpaper: ${response.statusText}`)
+    // If not found by ID, try by slug (for slug-based URLs)
+    if (!wallpaper && !error) {
+      const { data: wallpaperBySlug, error: slugError } = await supabase
+        .from('wallpapers')
+        .select('*')
+        .ilike('title', `%${id.replace(/-/g, ' ')}%`)
+        .maybeSingle()
+      
+      wallpaper = wallpaperBySlug
+      error = slugError
     }
 
-    return await response.json()
+    if (error) {
+      console.error('Supabase error:', error)
+      return null
+    }
+
+    if (!wallpaper) {
+      return null
+    }
+
+    // Add stats to the wallpaper
+    const wallpapersWithStats = await addRealStats([wallpaper])
+    return wallpapersWithStats[0] || null
   } catch (error) {
     console.error('Error fetching wallpaper:', error)
     return null

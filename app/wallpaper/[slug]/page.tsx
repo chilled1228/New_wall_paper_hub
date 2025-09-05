@@ -31,62 +31,74 @@ function formatNumber(num: number): string {
   return num.toString()
 }
 
-// Helper function to add stats to a single wallpaper with better performance
-async function addWallpaperStats(wallpaper: any): Promise<WallpaperWithStats> {
-  // Fetch stats for this wallpaper in a single optimized query
-  const { data: stats } = await supabase
-    .from('wallpaper_stats')
-    .select('downloads, likes, views')
-    .eq('wallpaper_id', wallpaper.id)
-    .maybeSingle() // Use maybeSingle for better performance when expecting 0 or 1 results
-
-  const downloads = stats?.downloads || 0
-  const likes = stats?.likes || 0  
-  const views = stats?.views || 0
-  
-  return {
-    ...wallpaper,
-    stats,
-    downloads: formatNumber(downloads),
-    likes: formatNumber(likes),
-    views: formatNumber(views),
-    featured: views > 100,
-    resolutions: [
-      { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
-      { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
-      { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
-      { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
-    ],
-    colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"],
-    uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
-    author: "WallpaperHub"
-  }
-}
-
-// Optimized function to get wallpaper by short ID with single query
-async function getWallpaperByShortId(shortId: string): Promise<any> {
-  // Use a more efficient query - search in database rather than fetching all
-  const { data: wallpapers, error } = await supabase
-    .from('wallpapers')
-    .select('*')
-    .filter('id', 'like', `%${shortId}`)
-    .limit(5) // Minimal limit since short IDs should be unique
-    .single() // This will error if more than one result, which is good for uniqueness
-    
-  if (error) {
-    // Fallback to the old method only if needed
-    const { data: fallbackWallpapers } = await supabase
+// Optimized function to get wallpaper with stats using correct UUID matching
+async function getWallpaperWithStats(shortId: string): Promise<WallpaperWithStats | null> {
+  try {
+    // Use SQL RIGHT function to match the last 8 characters correctly
+    let { data: wallpapers, error: wallpaperError } = await supabase
       .from('wallpapers')
       .select('*')
-      .limit(50)
-      .order('created_at', { ascending: false })
+      .filter('id', 'like', `%${shortId}`)
+      .limit(1)
       
-    const filtered = fallbackWallpapers?.filter(w => w.id.endsWith(shortId)) || []
-    return filtered[0] || null
+    if (wallpaperError || !wallpapers || wallpapers.length === 0) {
+      console.log(`No wallpapers found with shortId: ${shortId}, trying fallback`)
+      // Fallback: use a more targeted query
+      const { data: fallbackWallpapers } = await supabase
+        .from('wallpapers')
+        .select('*')
+        .limit(100)
+        .order('created_at', { ascending: false })
+        
+      const filtered = fallbackWallpapers?.filter(w => {
+        // Get the last 8 characters of the UUID properly
+        const fullId = w.id.toString()
+        const lastEight = fullId.slice(-8)
+        return lastEight === shortId
+      }) || []
+      
+      console.log(`Fallback found ${filtered.length} wallpapers`)
+      if (filtered.length === 0) return null
+      wallpapers = filtered
+    }
+    
+    const wallpaper = wallpapers[0]
+    if (!wallpaper) return null
+    
+    // Get stats separately for compatibility
+    const { data: stats } = await supabase
+      .from('wallpaper_stats')
+      .select('downloads, likes, views')
+      .eq('wallpaper_id', wallpaper.id)
+      .maybeSingle()
+    
+    const downloads = stats?.downloads || 0
+    const likes = stats?.likes || 0  
+    const views = stats?.views || 0
+    
+    return {
+      ...wallpaper,
+      stats,
+      downloads: formatNumber(downloads),
+      likes: formatNumber(likes),
+      views: formatNumber(views),
+      featured: views > 100,
+      resolutions: [
+        { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
+        { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
+        { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
+        { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
+      ],
+      colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"],
+      uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+      author: "WallpaperHub"
+    }
+  } catch (error) {
+    console.error('Error fetching wallpaper:', error)
+    return null
   }
-  
-  return wallpapers
 }
+
 
 
 interface WallpaperPageProps {
@@ -110,16 +122,12 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
       notFound()
     }
 
-    // Get wallpaper using optimized query
-    const wallpaperData = await getWallpaperByShortId(shortId)
+    // Get wallpaper with stats in single optimized query
+    const wallpaper = await getWallpaperWithStats(shortId)
     
-    if (!wallpaperData) {
+    if (!wallpaper) {
       notFound()
     }
-    
-    // Add stats and additional data to the wallpaper
-    const wallpaperWithStats = await addWallpaperStats(wallpaperData)
-    const wallpaper = wallpaperWithStats as WallpaperWithStats
 
     // Generate canonical slug for this wallpaper
     const canonicalSlug = generateWallpaperSlug(wallpaper)
@@ -203,16 +211,14 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
     }
 
     // Use the same optimized query as the main component
-    const wallpaperData = await getWallpaperByShortId(shortId)
+    const wallpaper = await getWallpaperWithStats(shortId)
     
-    if (!wallpaperData) {
+    if (!wallpaper) {
       return {
         title: "Wallpaper Not Found | WallpaperHub",
         description: "The requested wallpaper could not be found.",
       }
     }
-
-    const wallpaper = await addWallpaperStats(wallpaperData) as WallpaperWithStats
 
     const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`
     const title = `${wallpaper.title} - Free ${wallpaper.category} Wallpaper | WallpaperHub`

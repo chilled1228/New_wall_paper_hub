@@ -1,4 +1,5 @@
 import { HeroSection } from "@/components/hero-section"
+import { PopularWallpapers } from "@/components/popular-wallpapers"
 import { AllWallpapers } from "@/components/all-wallpapers"
 import { Categories } from "@/components/categories"
 import { Footer } from "@/components/footer"
@@ -12,6 +13,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <main>
         <HeroSection />
+        <PopularWallpapers />
         <AllWallpapers />
         <Categories />
       </main>

@@ -49,72 +49,28 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
     setIsHydrated(true)
   }, [])
 
-  // Check if user has already liked this wallpaper after hydration - OPTIMIZED
+  // Optimized like status check - only check localStorage initially, API call on interaction
   useEffect(() => {
     if (!isHydrated) return
 
-    const checkLikeStatus = async () => {
+    const checkLikeStatusOptimized = async () => {
       try {
-        // Get or create simple device ID
-        let deviceId = localStorage.getItem('simple_device_id')
-        if (!deviceId) {
-          deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
-          localStorage.setItem('simple_device_id', deviceId)
-        }
+        // Start with localStorage only for initial state (faster)
+        const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
+        setIsLiked(likedWallpapers.includes(wallpaper.id))
         
-        // Batch both API calls to reduce round trips
-        const [likeResponse, statsResponse] = await Promise.allSettled([
-          fetch(`/api/wallpapers/${wallpaper.id}/like?deviceId=${deviceId}`),
-          fetch(`/api/wallpapers/${wallpaper.id}/stats`)
-        ])
+        // No immediate API calls - we'll only sync on user interaction
+        // This reduces initial load time significantly
         
-        // Handle like status
-        if (likeResponse.status === 'fulfilled' && likeResponse.value.ok) {
-          const data = await likeResponse.value.json()
-          
-          // Set state from server data (this is the source of truth)
-          setIsLiked(data.liked)
-          setLikeCount(data.totalLikes)
-          
-          // Update localStorage to match server state
-          let likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
-          if (data.liked && !likedWallpapers.includes(wallpaper.id)) {
-            likedWallpapers.push(wallpaper.id)
-            localStorage.setItem('liked_wallpapers', JSON.stringify(likedWallpapers))
-          } else if (!data.liked && likedWallpapers.includes(wallpaper.id)) {
-            const filtered = likedWallpapers.filter((id: string) => id !== wallpaper.id)
-            localStorage.setItem('liked_wallpapers', JSON.stringify(filtered))
-          }
-        } else {
-          // Fallback to localStorage if server request fails
-          const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
-          setIsLiked(likedWallpapers.includes(wallpaper.id))
-        }
-
-        // Handle stats
-        if (statsResponse.status === 'fulfilled' && statsResponse.value.ok) {
-          const statsData = await statsResponse.value.json()
-          if (statsData.downloads !== undefined) {
-            setDownloadCount(statsData.downloads)
-          }
-        }
       } catch (error) {
-        console.error('Error checking like status:', error)
-        // Fallback to localStorage if error
-        try {
-          const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
-          setIsLiked(likedWallpapers.includes(wallpaper.id))
-        } catch (storageError) {
-          console.error('Error accessing localStorage:', storageError)
-          // Set default state if localStorage fails
-          setIsLiked(false)
-        }
+        console.error('Error checking initial like status:', error)
+        setIsLiked(false)
       }
     }
 
     // Only run if wallpaper.id exists
     if (wallpaper?.id) {
-      checkLikeStatus()
+      checkLikeStatusOptimized()
     }
   }, [wallpaper?.id, isHydrated])
 
@@ -332,13 +288,7 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
                 className="w-full h-full object-cover"
                 loading="eager" // Load immediately since this is the main image
                 decoding="async" // Non-blocking decode
-                onLoad={() => {
-                  // Preload the high-res version in background for downloads
-                  if (wallpaper.large_url || wallpaper.original_url) {
-                    const highResImage = new Image()
-                    highResImage.src = wallpaper.large_url || wallpaper.original_url || ''
-                  }
-                }}
+                // Removed aggressive preloading for better performance
               />
             </div>
             {wallpaper.featured && (
