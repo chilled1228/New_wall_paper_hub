@@ -1,11 +1,23 @@
 import { notFound } from 'next/navigation'
-import { getPostBySlug, incrementViews } from '@/lib/blog'
+import { getPostBySlug, incrementViews, getAllPosts } from '@/lib/blog'
 import { BlogPost } from '@/components/blog/blog-post'
 import type { Metadata } from 'next'
 
 interface Props {
   params: {
     slug: string
+  }
+}
+
+export async function generateStaticParams() {
+  try {
+    const posts = await getAllPosts('published')
+    return posts.map((post) => ({
+      slug: post.slug,
+    }))
+  } catch (error) {
+    console.error('Error generating static params:', error)
+    return []
   }
 }
 
@@ -35,6 +47,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
   }
 }
+
+export const revalidate = 3600 // Revalidate every hour
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params

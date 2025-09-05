@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseServiceKey)
+export const supabase = createClient(supabaseUrl, supabaseKey)
 
 export type BlogPost = {
   id: string
@@ -87,31 +87,44 @@ export async function getAllPosts(status?: string): Promise<BlogPost[]> {
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
-  const { data, error } = await supabase
-    .from('blog_posts')
-    .select(`
-      *,
-      blog_post_categories(
-        blog_categories(id, name, slug, color)
-      ),
-      blog_post_tags(
-        blog_tags(id, name, slug)
-      )
-    `)
-    .eq('slug', slug)
-    .single()
+  try {
+    console.log('Fetching post with slug:', slug)
+    
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select(`
+        *,
+        blog_post_categories(
+          blog_categories(id, name, slug, color)
+        ),
+        blog_post_tags(
+          blog_tags(id, name, slug)
+        )
+      `)
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .single()
 
-  if (error) {
-    console.error('Error fetching post:', error)
+    if (error) {
+      console.error('Supabase error fetching post:', error)
+      return null
+    }
+
+    if (!data) {
+      console.log('No data found for slug:', slug)
+      return null
+    }
+
+    console.log('Found post:', data.title)
+    
+    return {
+      ...data,
+      categories: data.blog_post_categories?.map((pc: any) => pc.blog_categories) || [],
+      tags: data.blog_post_tags?.map((pt: any) => pt.blog_tags) || []
+    }
+  } catch (error) {
+    console.error('Unexpected error fetching post:', error)
     return null
-  }
-
-  if (!data) return null
-
-  return {
-    ...data,
-    categories: data.blog_post_categories?.map((pc: any) => pc.blog_categories) || [],
-    tags: data.blog_post_tags?.map((pt: any) => pt.blog_tags) || []
   }
 }
 
