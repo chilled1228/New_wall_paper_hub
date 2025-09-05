@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { BlogComment, BlogCommentWithReplies, BlogCommentInsert } from './database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -342,4 +343,226 @@ export function extractKeywords(content: string, title: string): string[] {
     .sort(([,a], [,b]) => b - a)
     .slice(0, 10)
     .map(([word]) => word)
+}
+
+// Related Posts Functions
+export async function getRelatedPosts(postId: string, limit: number = 4): Promise<BlogPost[]> {
+  try {
+    // First get the current post to find its categories and tags
+    const { data: currentPost, error: currentPostError } = await supabase
+      .from('blog_posts')
+      .select(`
+        id,
+        blog_post_categories(
+          blog_categories(id, name, slug)
+        ),
+        blog_post_tags(
+          blog_tags(id, name, slug)
+        )
+      `)
+      .eq('id', postId)
+      .single()
+
+    if (currentPostError || !currentPost) {
+      console.error('Error fetching current post for related posts:', currentPostError)
+      return []
+    }
+
+    // Extract category and tag IDs
+    const categoryIds = currentPost.blog_post_categories?.map((pc: any) => pc.blog_categories.id) || []
+    const tagIds = currentPost.blog_post_tags?.map((pt: any) => pt.blog_tags.id) || []
+
+    // Build a query to find related posts
+    let relatedPosts: BlogPost[] = []
+
+    // Strategy 1: Find posts with matching categories
+    if (categoryIds.length > 0) {
+      const { data: categoryMatches } = await supabase
+        .from('blog_posts')
+        .select(`
+          *,
+          blog_post_categories!inner(
+            blog_categories(id, name, slug, color)
+          ),
+          blog_post_tags(
+            blog_tags(id, name, slug)
+          )
+        `)
+        .in('blog_post_categories.category_id', categoryIds)
+        .neq('id', postId)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(limit * 2) // Get more to filter duplicates
+
+      if (categoryMatches) {
+        relatedPosts = categoryMatches.map(post => ({
+          ...post,
+          categories: post.blog_post_categories?.map((pc: any) => pc.blog_categories) || [],
+          tags: post.blog_post_tags?.map((pt: any) => pt.blog_tags) || []
+        }))
+      }
+    }
+
+    // Strategy 2: If we don't have enough posts, find posts with matching tags
+    if (relatedPosts.length < limit && tagIds.length > 0) {
+      const excludeIds = [postId, ...relatedPosts.map(p => p.id)]
+      
+      const { data: tagMatches } = await supabase
+        .from('blog_posts')
+        .select(`
+          *,
+          blog_post_categories(
+            blog_categories(id, name, slug, color)
+          ),
+          blog_post_tags!inner(
+            blog_tags(id, name, slug)
+          )
+        `)
+        .in('blog_post_tags.tag_id', tagIds)
+        .not('id', 'in', `(${excludeIds.join(',')})`)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (tagMatches) {
+        const tagMatchPosts = tagMatches.map(post => ({
+          ...post,
+          categories: post.blog_post_categories?.map((pc: any) => pc.blog_categories) || [],
+          tags: post.blog_post_tags?.map((pt: any) => pt.blog_tags) || []
+        }))
+        
+        relatedPosts = [...relatedPosts, ...tagMatchPosts]
+      }
+    }
+
+    // Strategy 3: If still not enough, get latest posts from same author or just latest
+    if (relatedPosts.length < limit) {
+      const excludeIds = [postId, ...relatedPosts.map(p => p.id)]
+      
+      const { data: latestPosts } = await supabase
+        .from('blog_posts')
+        .select(`
+          *,
+          blog_post_categories(
+            blog_categories(id, name, slug, color)
+          ),
+          blog_post_tags(
+            blog_tags(id, name, slug)
+          )
+        `)
+        .not('id', 'in', `(${excludeIds.join(',')})`)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (latestPosts) {
+        const latestPostsFormatted = latestPosts.map(post => ({
+          ...post,
+          categories: post.blog_post_categories?.map((pc: any) => pc.blog_categories) || [],
+          tags: post.blog_post_tags?.map((pt: any) => pt.blog_tags) || []
+        }))
+        
+        relatedPosts = [...relatedPosts, ...latestPostsFormatted]
+      }
+    }
+
+    // Remove duplicates and limit results
+    const uniquePosts = relatedPosts.filter((post, index, self) => 
+      index === self.findIndex(p => p.id === post.id)
+    )
+
+    return uniquePosts.slice(0, limit)
+  } catch (error) {
+    console.error('Error fetching related posts:', error)
+    return []
+  }
+}
+
+// Comments Functions
+export async function getPostComments(postId: string): Promise<BlogCommentWithReplies[]> {
+  try {
+    const { data: comments, error } = await supabase
+      .from('blog_comments')
+      .select('*')
+      .eq('post_id', postId)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching comments:', error)
+      return []
+    }
+
+    if (!comments) return []
+
+    // Build comment tree (comments with replies)
+    const commentMap = new Map<string, BlogCommentWithReplies>()
+    const rootComments: BlogCommentWithReplies[] = []
+
+    // First pass: create comment objects with empty replies arrays
+    comments.forEach(comment => {
+      commentMap.set(comment.id, { ...comment, replies: [] })
+    })
+
+    // Second pass: build the tree structure
+    comments.forEach(comment => {
+      const commentWithReplies = commentMap.get(comment.id)!
+      
+      if (comment.parent_id) {
+        // This is a reply
+        const parent = commentMap.get(comment.parent_id)
+        if (parent) {
+          parent.replies!.push(commentWithReplies)
+        }
+      } else {
+        // This is a root comment
+        rootComments.push(commentWithReplies)
+      }
+    })
+
+    return rootComments
+  } catch (error) {
+    console.error('Error fetching comments:', error)
+    return []
+  }
+}
+
+export async function createComment(comment: BlogCommentInsert): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('blog_comments')
+      .insert([comment])
+      .select('id')
+      .single()
+
+    if (error) {
+      console.error('Error creating comment:', error)
+      return null
+    }
+
+    return data?.id || null
+  } catch (error) {
+    console.error('Error creating comment:', error)
+    return null
+  }
+}
+
+export async function getCommentCount(postId: string): Promise<number> {
+  try {
+    const { count, error } = await supabase
+      .from('blog_comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', postId)
+      .eq('status', 'approved')
+
+    if (error) {
+      console.error('Error getting comment count:', error)
+      return 0
+    }
+
+    return count || 0
+  } catch (error) {
+    console.error('Error getting comment count:', error)
+    return 0
+  }
 }

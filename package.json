@@ -9,7 +9,8 @@
     "start": "next start",
     "seed": "node scripts/seed-simple.js",
     "seed:wallpapers": "npx ts-node scripts/seed-wallpapers.ts",
-    "seed:blog": "npx ts-node scripts/seed-blog-posts.ts"
+    "seed:blog": "npx ts-node scripts/seed-blog-posts.ts",
+    "setup:comments": "npx ts-node scripts/setup-comments.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

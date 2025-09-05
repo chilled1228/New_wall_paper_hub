@@ -14,6 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_comments: {
+        Row: {
+          id: string
+          post_id: string
+          parent_id: string | null
+          author_name: string
+          author_email: string
+          author_website: string | null
+          content: string
+          status: 'pending' | 'approved' | 'rejected' | 'spam'
+          user_ip: unknown | null
+          user_agent: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          parent_id?: string | null
+          author_name: string
+          author_email: string
+          author_website?: string | null
+          content: string
+          status?: 'pending' | 'approved' | 'rejected' | 'spam'
+          user_ip?: unknown | null
+          user_agent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          parent_id?: string | null
+          author_name?: string
+          author_email?: string
+          author_website?: string | null
+          content?: string
+          status?: 'pending' | 'approved' | 'rejected' | 'spam'
+          user_ip?: unknown | null
+          user_agent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "blog_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blog_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "blog_comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      blog_comment_votes: {
+        Row: {
+          id: string
+          comment_id: string
+          user_ip: unknown
+          vote_type: 'like' | 'dislike'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          comment_id: string
+          user_ip: unknown
+          vote_type: 'like' | 'dislike'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          comment_id?: string
+          user_ip?: unknown
+          vote_type?: 'like' | 'dislike'
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_comment_votes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "blog_comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       user_interactions: {
         Row: {
           created_at: string | null
@@ -200,6 +292,23 @@ export type WallpaperStatsUpdate = Database['public']['Tables']['wallpaper_stats
 export type UserInteraction = Database['public']['Tables']['user_interactions']['Row']
 export type UserInteractionInsert = Database['public']['Tables']['user_interactions']['Insert']
 export type UserInteractionUpdate = Database['public']['Tables']['user_interactions']['Update']
+
+// Blog comment types
+export type BlogComment = Database['public']['Tables']['blog_comments']['Row']
+export type BlogCommentInsert = Database['public']['Tables']['blog_comments']['Insert']
+export type BlogCommentUpdate = Database['public']['Tables']['blog_comments']['Update']
+
+export type BlogCommentVote = Database['public']['Tables']['blog_comment_votes']['Row']
+export type BlogCommentVoteInsert = Database['public']['Tables']['blog_comment_votes']['Insert']
+export type BlogCommentVoteUpdate = Database['public']['Tables']['blog_comment_votes']['Update']
+
+// Extended comment type with replies and vote counts
+export interface BlogCommentWithReplies extends BlogComment {
+  replies?: BlogCommentWithReplies[]
+  like_count?: number
+  dislike_count?: number
+  user_vote?: 'like' | 'dislike' | null
+}
 
 // Extended wallpaper type that includes real stats from database
 export interface WallpaperWithStats extends Wallpaper {

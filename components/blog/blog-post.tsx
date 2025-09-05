@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Calendar, Clock, Eye, ArrowLeft, Share2, Tag, User } from 'lucide-react'
+import { RelatedPosts } from './related-posts'
+import { CommentsSection } from './comments-section'
 import type { BlogPost as BlogPostType } from '@/lib/blog'
 
 interface BlogPostProps {
@@ -196,6 +198,12 @@ export function BlogPost({ post }: BlogPostProps) {
         )}
 
       </article>
+      
+      {/* Related Posts */}
+      <RelatedPosts currentPostId={post.id} />
+      
+      {/* Comments Section */}
+      <CommentsSection postId={post.id} />
       
       {/* CTA Section - Outside article for full width */}
       <section className="container mx-auto px-4 py-16 max-w-6xl">

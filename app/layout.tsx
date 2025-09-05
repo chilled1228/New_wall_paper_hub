@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { LoadingBar } from "@/components/loading-bar"
 import CacheInvalidator from "@/components/cache-invalidator"
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -45,6 +46,7 @@ export default function RootLayout({
           <LoadingBar />
           <Header />
           {children}
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
