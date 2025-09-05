@@ -1,5 +1,6 @@
 'use client'
 
+import React, { useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -7,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Calendar, Clock, Eye, ArrowLeft, Share2, Tag, User } from 'lucide-react'
 import type { BlogPost as BlogPostType } from '@/lib/blog'
-import { useEffect } from 'react'
 
 interface BlogPostProps {
   post: BlogPostType

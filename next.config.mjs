@@ -26,6 +26,31 @@ const nextConfig = {
       }
     }
     
+    // Fix chunk loading issues
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks?.cacheGroups,
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendor',
+              chunks: 'all',
+              enforce: true,
+            },
+          },
+        },
+      }
+    }
+    
+    // Improve module caching
+    config.cache = {
+      type: 'filesystem',
+      version: process.env.NODE_ENV,
+    }
+    
     return config
   },
   images: {
@@ -82,6 +107,19 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/chunks/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+          {
+            key: 'ETag',
+            value: 'false',
           },
         ],
       },

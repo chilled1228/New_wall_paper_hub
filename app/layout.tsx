@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { LoadingBar } from "@/components/loading-bar"
+import CacheInvalidator from "@/components/cache-invalidator"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,7 +28,8 @@ export const metadata: Metadata = {
   title: "WallpaperHub - Premium Mobile Wallpapers",
   description:
     "Discover and download high-quality mobile wallpapers. Browse categories like nature, abstract, minimalist and more.",
-    generator: 'v0.app'
+  generator: 'v0.app',
+  manifest: '/manifest.json'
 }
 
 export default function RootLayout({
@@ -39,6 +41,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${poppins.variable} ${roboto.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <CacheInvalidator />
           <LoadingBar />
           <Header />
           {children}

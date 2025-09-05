@@ -4,10 +4,11 @@ import { getAuthUser } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const post = await getPostById(params.id)
+    const { id } = await params
+    const post = await getPostById(id)
     
     if (!post) {
       return NextResponse.json(
@@ -28,7 +29,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication for admin routes
@@ -40,6 +41,7 @@ export async function PUT(
       )
     }
 
+    const { id } = await params
     const data = await request.json()
     
     // Recalculate reading time if content changed
@@ -52,7 +54,7 @@ export async function PUT(
       }
     }
     
-    const success = await updatePost(params.id, data)
+    const success = await updatePost(id, data)
     
     if (!success) {
       return NextResponse.json(
@@ -74,7 +76,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication for admin routes
@@ -86,7 +88,8 @@ export async function DELETE(
       )
     }
 
-    const success = await deletePost(params.id)
+    const { id } = await params
+    const success = await deletePost(id)
     
     if (!success) {
       return NextResponse.json(
