@@ -7,6 +7,8 @@ export async function GET(
 ) {
   try {
     const { id: wallpaperId } = await params
+    const { searchParams } = new URL(request.url)
+    const deviceId = searchParams.get('deviceId')
 
     if (!wallpaperId) {
       return NextResponse.json(
@@ -22,15 +24,29 @@ export async function GET(
       .eq('wallpaper_id', wallpaperId)
       .maybeSingle() // Use maybeSingle for better performance
 
+    // Check if user has liked this wallpaper (if deviceId provided)
+    let isLiked = false
+    if (deviceId) {
+      const { data: likeData, error: likeError } = await supabase
+        .from('wallpaper_likes')
+        .select('id')
+        .eq('wallpaper_id', wallpaperId)
+        .eq('device_id', deviceId)
+        .maybeSingle()
+
+      isLiked = !likeError && !!likeData
+    }
+
     const response = NextResponse.json({
       downloads: stats?.downloads || 0,
       likes: stats?.likes || 0,
-      views: stats?.views || 0
+      views: stats?.views || 0,
+      isLiked
     })
     
-    // Add cache headers
-    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
-    response.headers.set('CDN-Cache-Control', 'public, s-maxage=30')
+    // Reduce cache time since we need fresher data for accuracy
+    response.headers.set('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=30')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=10')
     
     return response
 

@@ -108,12 +108,13 @@ export async function SimpleGallery() {
           return (
             <Link key={wallpaper.id} href={`/wallpaper/${slug}`}>
               <div className="group cursor-pointer">
-                <div className="aspect-[9/16] overflow-hidden bg-muted relative">
+                <div className="aspect-[9/16] bg-muted relative rounded-lg overflow-hidden">
                   <Image
                     src={wallpaper.medium_url || wallpaper.image_url || "/placeholder.svg"}
                     alt={`${wallpaper.title} - Mobile wallpaper in ${wallpaper.category} category`}
                     fill
-                    className="object-cover transition-transform group-hover:scale-105"
+                    className="object-cover object-center transition-transform group-hover:scale-105"
+                    style={{ objectPosition: 'center 20%' }}
                     loading="lazy"
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
                     quality={85}

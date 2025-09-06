@@ -43,6 +43,7 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
   const [isHydrated, setIsHydrated] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadCount, setDownloadCount] = useState(parseInt(wallpaper.downloads || '0') || 0)
+  const [statsLoaded, setStatsLoaded] = useState(false)
   const { toast } = useToast()
 
   // Handle hydration
@@ -50,29 +51,36 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
     setIsHydrated(true)
   }, [])
 
-  // Optimized like status check - only check localStorage initially, API call on interaction
+  // Load real-time stats from Supabase
   useEffect(() => {
-    if (!isHydrated) return
+    if (!isHydrated || !wallpaper?.id) return
 
-    const checkLikeStatusOptimized = async () => {
+    const loadRealTimeStats = async () => {
       try {
-        // Start with localStorage only for initial state (faster)
-        const likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
-        setIsLiked(likedWallpapers.includes(wallpaper.id))
-        
-        // No immediate API calls - we'll only sync on user interaction
-        // This reduces initial load time significantly
-        
+        // Get device ID for like status
+        let deviceId = localStorage.getItem('simple_device_id')
+        if (!deviceId) {
+          deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now()
+          localStorage.setItem('simple_device_id', deviceId)
+        }
+
+        // Fetch current stats and like status from database
+        const response = await fetch(`/api/wallpapers/${wallpaper.id}/stats?deviceId=${encodeURIComponent(deviceId)}`)
+        const data = await response.json()
+
+        if (response.ok && data) {
+          setDownloadCount(data.downloads || 0)
+          setLikeCount(data.likes || 0)
+          setIsLiked(data.isLiked || false)
+          setStatsLoaded(true)
+        }
       } catch (error) {
-        console.error('Error checking initial like status:', error)
-        setIsLiked(false)
+        console.error('Error loading stats:', error)
+        setStatsLoaded(true)
       }
     }
 
-    // Only run if wallpaper.id exists
-    if (wallpaper?.id) {
-      checkLikeStatusOptimized()
-    }
+    loadRealTimeStats()
   }, [wallpaper?.id, isHydrated])
 
   // Prevent rendering interactive elements on server - MOVED AFTER HOOKS
@@ -236,18 +244,9 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
       const data = await response.json()
 
       if (response.ok) {
-        // Update local state
+        // Update local state with real database values
         setIsLiked(data.liked)
         setLikeCount(data.totalLikes)
-
-        // Update localStorage
-        let likedWallpapers = JSON.parse(localStorage.getItem('liked_wallpapers') || '[]')
-        if (data.liked && !likedWallpapers.includes(wallpaper.id)) {
-          likedWallpapers.push(wallpaper.id)
-        } else if (!data.liked) {
-          likedWallpapers = likedWallpapers.filter((id: string) => id !== wallpaper.id)
-        }
-        localStorage.setItem('liked_wallpapers', JSON.stringify(likedWallpapers))
 
         toast({
           title: data.liked ? "Added to favorites! ❤️" : "Removed from favorites",

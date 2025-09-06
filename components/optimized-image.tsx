@@ -199,7 +199,7 @@ function OptimizedImageInternal({
             fill={fill}
             width={!fill ? width : undefined}
             height={!fill ? height : undefined}
-            className="object-cover blur-sm scale-110 transition-opacity duration-300"
+            className="object-contain blur-sm transition-opacity duration-300"
             quality={30}
             priority={priority}
           />
@@ -218,7 +218,7 @@ function OptimizedImageInternal({
         fill={fill}
         width={!fill ? width : undefined}
         height={!fill ? height : undefined}
-        className={`object-cover transition-opacity duration-500 ${
+        className={`object-contain transition-opacity duration-500 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         onLoad={handleImageLoad}
