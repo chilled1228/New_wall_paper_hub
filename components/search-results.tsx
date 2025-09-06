@@ -9,8 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { WallpaperWithStats } from "@/lib/database.types"
 import Link from "next/link"
 import { generateWallpaperSlug } from "@/lib/slug-utils"
-import { WallpaperInteractions } from "./wallpaper-interactions"
-import { OptimizedImage } from "./optimized-image"
+import Image from "next/image"
 
 interface SearchResultsProps {
   query: string
@@ -176,7 +175,7 @@ export function SearchResults({ query, filters }: SearchResultsProps) {
           {results.map((wallpaper) => (
             <Link
               key={wallpaper.id}
-              href={`/wallpaper/${generateWallpaperSlug(wallpaper.id, wallpaper.title)}`}
+              href={`/wallpaper/${generateWallpaperSlug(wallpaper)}`}
             >
               <Card
                 className={`group overflow-hidden hover:shadow-lg transition-all duration-300 ${
@@ -190,16 +189,13 @@ export function SearchResults({ query, filters }: SearchResultsProps) {
                       viewMode === "list" ? "w-32 h-32 flex-shrink-0" : "aspect-[3/4]"
                     }`}
                   >
-                    <OptimizedImage
-                      src={wallpaper.image_url || "/placeholder.svg"}
-                      thumbnailSrc={wallpaper.thumbnail_url || undefined}
-                      mediumSrc={wallpaper.medium_url || undefined}
-                      largeSrc={wallpaper.large_url || undefined}
-                      originalSrc={wallpaper.original_url || undefined}
+                    <Image
+                      src={wallpaper.medium_url || wallpaper.image_url || "/placeholder.svg"}
                       alt={`${wallpaper.title} - ${wallpaper.category} wallpaper for mobile devices`}
                       fill
-                      className="group-hover:scale-105 transition-transform duration-300"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
                       sizes={viewMode === "list" ? "128px" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
+                      quality={85}
                     />
 
                     {/* Overlay */}
