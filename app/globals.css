@@ -269,6 +269,25 @@
     input, textarea {
       @apply min-h-[48px] text-base;
     }
+
+    /* Better mobile spacing */
+    .container {
+      @apply px-4;
+    }
+  }
+
+  /* Tablet and small desktop improvements */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+      @apply px-6;
+    }
+  }
+
+  /* Large desktop improvements */
+  @media (min-width: 1280px) {
+    .container {
+      @apply px-8;
+    }
   }
 }
 

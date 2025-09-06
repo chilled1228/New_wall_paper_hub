@@ -63,8 +63,8 @@ export function Header() {
 
           {/* Center Section: Navigation Menu - Better breakpoints */}
           <div className="flex items-center justify-center flex-1 px-4">
-            {/* Desktop Navigation - Adjusted for small PC screens with prefetch */}
-            <nav className="hidden xl:flex items-center space-x-6">
+            {/* Desktop Navigation - Show on larger screens */}
+            <nav className="hidden lg:flex items-center space-x-6">
               <Link 
                 href="/" 
                 prefetch={true}
@@ -95,8 +95,8 @@ export function Header() {
               </Link>
             </nav>
 
-            {/* Desktop Search - Show on larger screens with more space */}
-            <div className="hidden 2xl:flex items-center w-full max-w-md ml-8">
+            {/* Desktop Search - Show on larger screens */}
+            <div className="hidden xl:flex items-center w-full max-w-md ml-8">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -118,7 +118,7 @@ export function Header() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="2xl:hidden flex-shrink-0" 
+                className="xl:hidden flex-shrink-0" 
                 onClick={toggleSearch}
                 aria-label="Toggle search"
               >
@@ -137,7 +137,7 @@ export function Header() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="xl:hidden flex-shrink-0" 
+                    className="lg:hidden flex-shrink-0" 
                     aria-label="Open menu"
                   >
                     <Menu className="h-5 w-5" />
@@ -217,7 +217,7 @@ export function Header() {
 
         {/* Mobile Search Bar - Better positioned */}
         {isSearchOpen && (
-          <div className="2xl:hidden border-t bg-muted/10">
+          <div className="xl:hidden border-t bg-muted/10">
             <div className="py-4 px-4 sm:px-6">
               <div className="space-y-3">
                 <div className="relative">
