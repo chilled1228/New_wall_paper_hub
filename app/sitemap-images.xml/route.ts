@@ -48,6 +48,7 @@ export async function GET() {
         <image:caption>${cleanDescription}</image:caption>
         <image:geo_location>Global</image:geo_location>
         <image:license>${baseUrl}/license</image:license>
+        <image:family_friendly>yes</image:family_friendly>
       </image:image>
       ${fullSizeUrl !== imageUrl ? `
       <image:image>
@@ -56,6 +57,7 @@ export async function GET() {
         <image:caption>${cleanDescription} - Full quality download</image:caption>
         <image:geo_location>Global</image:geo_location>
         <image:license>${baseUrl}/license</image:license>
+        <image:family_friendly>yes</image:family_friendly>
       </image:image>` : ''}
       <lastmod>${wallpaper.updated_at || wallpaper.created_at}</lastmod>
       <changefreq>monthly</changefreq>

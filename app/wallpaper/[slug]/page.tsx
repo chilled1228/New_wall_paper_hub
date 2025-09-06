@@ -32,25 +32,29 @@ function formatNumber(num: number): string {
 // Highly optimized function to get wallpaper with stats in a single query
 async function getWallpaperWithStats(shortId: string): Promise<WallpaperWithStats | null> {
   try {
-    // First try to find wallpaper using a more compatible approach
-    // Use RPC function or simpler query if available
+    // First get wallpaper IDs using RPC function, then get full data
+    const { data: wallpaperIds, error: idError } = await supabase
+      .rpc('find_wallpapers_by_suffix', { suffix_param: shortId })
+    
+    if (idError || !wallpaperIds || wallpaperIds.length === 0) {
+      console.error('Database error:', idError)
+      return null
+    }
+
+    // Get the full wallpaper data using the found ID
     const { data: wallpapers, error: wallpaperError } = await supabase
       .from('wallpapers')
       .select('id, title, description, category, tags, image_url, thumbnail_url, medium_url, large_url, original_url, created_at')
-      .limit(50) // Get recent wallpapers to search through
-      .order('created_at', { ascending: false })
+      .eq('id', wallpaperIds[0].id)
+      .limit(1)
       
     if (wallpaperError) {
       console.error('Database error:', wallpaperError)
       return null
     }
 
-    // Filter in JavaScript to find matching shortId
-    const wallpaper = wallpapers?.find(w => {
-      const fullId = w.id.toString()
-      const lastEight = fullId.slice(-8)
-      return lastEight === shortId
-    })
+    // Get the first match (there should typically be only one)
+    const wallpaper = wallpapers?.[0]
     
     if (!wallpaper) return null
     
@@ -225,12 +229,23 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
       }
     }
 
-    // Use lightweight query for metadata (we don't need stats for metadata)
+    // First get wallpaper IDs using RPC function, then get metadata
+    const { data: wallpaperIds, error: idError } = await supabase
+      .rpc('find_wallpapers_by_suffix', { suffix_param: shortId })
+    
+    if (idError || !wallpaperIds || wallpaperIds.length === 0) {
+      return {
+        title: "Wallpaper Not Found | WallpaperHub",
+        description: "The requested wallpaper could not be found.",
+      }
+    }
+
+    // Get the wallpaper metadata using the found ID
     const { data: wallpapers, error } = await supabase
       .from('wallpapers')
       .select('id, title, description, category, image_url, created_at')
-      .limit(50)
-      .order('created_at', { ascending: false })
+      .eq('id', wallpaperIds[0].id)
+      .limit(1)
     
     if (error) {
       return {
@@ -239,12 +254,8 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
       }
     }
     
-    // Find wallpaper by matching shortId
-    const wallpaper = wallpapers?.find(w => {
-      const fullId = w.id.toString()
-      const lastEight = fullId.slice(-8)
-      return lastEight === shortId
-    })
+    // Get the first match (there should typically be only one)
+    const wallpaper = wallpapers?.[0]
     
     if (!wallpaper) {
       return {

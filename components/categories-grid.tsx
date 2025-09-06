@@ -159,7 +159,7 @@ export function CategoriesGrid({ featured = false }: CategoriesGridProps) {
                 <div className="relative aspect-[4/3] overflow-hidden">
                   <img
                     src={category.image || "/placeholder.svg"}
-                    alt={category.name}
+                    alt={`${category.name} category wallpapers - Browse ${category.count} ${category.name.toLowerCase()} wallpapers for mobile`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
 

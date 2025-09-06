@@ -196,7 +196,7 @@ export function SearchResults({ query, filters }: SearchResultsProps) {
                       mediumSrc={wallpaper.medium_url || undefined}
                       largeSrc={wallpaper.large_url || undefined}
                       originalSrc={wallpaper.original_url || undefined}
-                      alt={wallpaper.title}
+                      alt={`${wallpaper.title} - ${wallpaper.category} wallpaper for mobile devices`}
                       fill
                       className="group-hover:scale-105 transition-transform duration-300"
                       sizes={viewMode === "list" ? "128px" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}

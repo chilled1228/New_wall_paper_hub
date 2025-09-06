@@ -93,6 +93,7 @@ export default function robots(): MetadataRoute.Robots {
       `${baseUrl}/sitemap-wallpapers.xml`,
       `${baseUrl}/sitemap-categories.xml`,
       `${baseUrl}/sitemap-blog.xml`,
+      `${baseUrl}/sitemap-images.xml`,
     ],
     host: baseUrl,
   }

@@ -30,10 +30,11 @@ class ImageProcessor:
         pillow_heif.register_heif_opener()
         
         # Resolution configurations - thumbnail for grid, medium for preview, large for detail, original for download
+        # Maximum quality settings (95%) for all WebP resolutions
         self.resolutions = {
-            'thumbnail': {'width': 150, 'height': 200, 'quality': 60},
-            'medium': {'width': 400, 'height': 533, 'quality': 75},
-            'large': {'width': 720, 'height': 960, 'quality': 85},
+            'thumbnail': {'width': 150, 'height': 200, 'quality': 95},  # Maximum quality
+            'medium': {'width': 400, 'height': 533, 'quality': 95},     # Maximum quality
+            'large': {'width': 720, 'height': 960, 'quality': 95},      # Maximum quality
             'original': {'width': None, 'height': None, 'quality': 95}  # Keep original size
         }
         
@@ -130,11 +131,20 @@ class ImageProcessor:
         # Get timestamp
         timestamp = datetime.now().strftime('%Y%m%d')
         
-        # Generate filename
+        # Generate filename - WebP for display resolutions, original format preserved for download
+        original_ext = Path(original_path).suffix.lower()
+        
         if resolution == 'original':
-            filename = f"wallpaper_{timestamp}_{file_hash}.jpg"
+            # Keep original format for download
+            if original_ext in ['.heic', '.heif']:
+                # Convert HEIC/HEIF to JPG for compatibility
+                filename = f"wallpaper_{timestamp}_{file_hash}.jpg"
+            else:
+                # Keep original format
+                filename = f"wallpaper_{timestamp}_{file_hash}{original_ext}"
         else:
-            filename = f"wallpaper_{timestamp}_{file_hash}_{resolution}.jpg"
+            # Use WebP for all display resolutions (thumbnail, medium, large)
+            filename = f"wallpaper_{timestamp}_{file_hash}_{resolution}.webp"
         
         return filename
     
@@ -341,18 +351,49 @@ class ImageProcessor:
                     processed = self.resize_image(img, config['width'], config['height'])
                     processed = self.enhance_image(processed, resolution)
                 
-                # Save with optimization
-                save_kwargs = {
-                    'format': 'JPEG',
-                    'quality': config['quality'],
-                    'optimize': True,
-                    'progressive': True if resolution in ['large', 'original'] else False
-                }
+                # Save with appropriate format and optimization
+                if resolution == 'original':
+                    # Save original in best compatible format
+                    original_ext = Path(image_path).suffix.lower()
+                    if original_ext in ['.heic', '.heif']:
+                        # Convert HEIC/HEIF to JPG for compatibility
+                        save_kwargs = {
+                            'format': 'JPEG',
+                            'quality': config['quality'],
+                            'optimize': True,
+                            'progressive': True
+                        }
+                    elif original_ext in ['.png']:
+                        # Keep PNG format for originals if needed
+                        save_kwargs = {
+                            'format': 'PNG',
+                            'optimize': True
+                        }
+                    else:
+                        # Default to high-quality JPEG
+                        save_kwargs = {
+                            'format': 'JPEG',
+                            'quality': config['quality'],
+                            'optimize': True,
+                            'progressive': True
+                        }
+                else:
+                    # Use WebP for all display resolutions (thumbnail, medium, large)
+                    # High-quality WebP settings for better visual quality
+                    save_kwargs = {
+                        'format': 'WebP',
+                        'quality': config['quality'],
+                        'method': 6,        # Best compression method (0-6, 6 is best quality)
+                        'optimize': True,
+                        'lossless': False,  # Use lossy but high quality
+                        'exact': False      # Allow slight quality adjustments for better compression
+                    }
                 
                 processed.save(output_path, **save_kwargs)
                 
-                # Inject SEO metadata if provided
-                if wallpaper_metadata:
+                # Inject SEO metadata if provided (only for JPEG/original files)
+                if wallpaper_metadata and resolution == 'original':
+                    # Only inject metadata into original files since WebP doesn't support EXIF/IPTC well
                     self.inject_seo_metadata(str(output_path), wallpaper_metadata)
                 
                 # Generate metadata
@@ -556,7 +597,11 @@ class ImageProcessor:
             keep_recent: Number of recent files to keep
         """
         try:
-            files = list(self.output_dir.glob('*.jpg'))
+            # Get all image files (WebP and other formats)
+            files = []
+            for pattern in ['*.jpg', '*.jpeg', '*.png', '*.webp']:
+                files.extend(self.output_dir.glob(pattern))
+            
             files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
             
             for file_path in files[keep_recent:]:

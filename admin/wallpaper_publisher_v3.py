@@ -140,8 +140,8 @@ class WallpaperPublisherV3:
         info_frame.pack(fill=tk.X, pady=(0, 20))
         
         ttk.Label(info_frame, text="🔗 SEO-friendly URLs with optimized slugs", font=("Arial", 9), foreground="blue").pack(anchor=tk.W)
-        ttk.Label(info_frame, text="📱 4 resolutions: thumbnail (150x200) → medium (400x533) → large (720x960) → original", font=("Arial", 9), foreground="green").pack(anchor=tk.W)
-        ttk.Label(info_frame, text="⚡ Optimized loading: thumbnail for grid → medium for preview → original for download", font=("Arial", 9), foreground="orange").pack(anchor=tk.W)
+        ttk.Label(info_frame, text="📱 4 resolutions: thumbnail (WebP) → medium (WebP) → large (WebP) → original (for download)", font=("Arial", 9), foreground="green").pack(anchor=tk.W)
+        ttk.Label(info_frame, text="⚡ WebP format for web display (smaller files, faster loading) + original format for downloads", font=("Arial", 9), foreground="orange").pack(anchor=tk.W)
         ttk.Label(info_frame, text="📊 Auto-creates analytics entries for tracking downloads, likes, and views", font=("Arial", 9), foreground="purple").pack(anchor=tk.W)
         ttk.Label(info_frame, text="🎯 Enhanced metadata with SEO optimization and structured data support", font=("Arial", 9), foreground="darkgreen").pack(anchor=tk.W)
         
@@ -560,7 +560,7 @@ class WallpaperPublisherV3:
             
             # Configure Gemini with latest model
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
             # Prepare the image
             image = Image.open(self.selected_image_path)
@@ -684,13 +684,21 @@ class WallpaperPublisherV3:
                     # Generate unique filename for this resolution
                     filename = Path(file_path).name
                     
-                    # Upload to R2
+                    # Upload to R2 with correct content type
+                    file_extension = Path(filename).suffix.lower()
+                    if file_extension == '.webp':
+                        content_type = 'image/webp'
+                    elif file_extension == '.png':
+                        content_type = 'image/png'
+                    else:
+                        content_type = 'image/jpeg'
+                    
                     with open(file_path, 'rb') as file:
                         self.r2_client.upload_fileobj(
                             file,
                             bucket_name,
                             filename,
-                            ExtraArgs={'ContentType': 'image/jpeg'}
+                            ExtraArgs={'ContentType': content_type}
                         )
                     
                     # Construct public URL
@@ -783,13 +791,15 @@ class WallpaperPublisherV3:
 🆔 Wallpaper ID: {wallpaper_id}
 📊 Analytics tracking: ENABLED
 
-🚀 Your wallpaper is now live with optimized loading:
-• Thumbnail for grid views (150x200)
-• Medium quality for preview pages (400x533)
-• Large quality for detailed viewing (720x960)
-• Original resolution for downloads (full quality)
+🚀 Your wallpaper is now live with optimized WebP loading:
+• Thumbnail WebP for grid views (150x200) - ultra-fast loading
+• Medium WebP for preview pages (400x533) - optimized display
+• Large WebP for detailed viewing (720x960) - high quality web
+• Original format for downloads (full quality) - best user experience
 
 💡 Features enabled:
+✅ WebP format for 60-80% smaller file sizes
+✅ Original format preserved for downloads
 ✅ SEO-optimized URL structure
 ✅ Mobile-responsive image loading
 ✅ Analytics tracking (views, likes, downloads)

@@ -43,24 +43,15 @@ export async function findWallpaperBySlug(slug: string): Promise<{ id: string } 
   // Import supabase here to avoid circular dependencies
   const { supabase } = await import('./supabase')
   
-  // For now, get a limited set of wallpapers and filter in JavaScript for compatibility
-  const { data: allWallpapers, error } = await supabase
-    .from('wallpapers')
-    .select('id')
-    .limit(100) // Limit to recent wallpapers to avoid performance issues
-    .order('created_at', { ascending: false })
+  // Use RPC function to handle UUID text casting properly
+  const { data: matchingWallpapers, error } = await supabase
+    .rpc('find_wallpapers_by_suffix', { suffix_param: shortId })
   
-  if (error || !allWallpapers) {
+  if (error || !matchingWallpapers || matchingWallpapers.length === 0) {
     return null
   }
   
-  // Filter for wallpapers whose ID ends with the short ID
-  const matchingWallpapers = allWallpapers.filter(w => w.id.endsWith(shortId))
-  
-  if (matchingWallpapers.length === 0) {
-    return null
-  }
-  
+  // Return the first match (there should typically be only one)
   return matchingWallpapers[0]
 }
 

@@ -288,7 +288,7 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
                 mediumSrc={wallpaper.medium_url || undefined}
                 largeSrc={wallpaper.large_url || undefined}
                 originalSrc={wallpaper.original_url || undefined}
-                alt={wallpaper.title}
+                alt={`${wallpaper.title} - High-quality ${wallpaper.category} wallpaper for mobile devices`}
                 fill={true}
                 priority={true}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 60vw"
