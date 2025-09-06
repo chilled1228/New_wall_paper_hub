@@ -6,11 +6,9 @@ import { RelatedWallpapers } from "@/components/related-wallpapers"
 import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
 import {
-  generateImageStructuredData,
-  generateOpenGraphMeta,
-  generateTwitterMeta,
-  generateCanonicalUrl,
-  generateMetaKeywords
+  generateEnhancedWallpaperStructuredData,
+  generateWallpaperMetadata,
+  generateBreadcrumbStructuredData
 } from "@/lib/seo-utils"
 import {
   findWallpaperBySlug,
@@ -31,71 +29,67 @@ function formatNumber(num: number): string {
   return num.toString()
 }
 
-// Optimized function to get wallpaper with stats using correct UUID matching
+// Highly optimized function to get wallpaper with stats in a single query
 async function getWallpaperWithStats(shortId: string): Promise<WallpaperWithStats | null> {
   try {
-    // Use SQL RIGHT function to match the last 8 characters correctly
-    let { data: wallpapers, error: wallpaperError } = await supabase
+    // First try to find wallpaper using a more compatible approach
+    // Use RPC function or simpler query if available
+    const { data: wallpapers, error: wallpaperError } = await supabase
       .from('wallpapers')
-      .select('*')
-      .filter('id', 'like', `%${shortId}`)
-      .limit(1)
+      .select('id, title, description, category, tags, image_url, thumbnail_url, medium_url, large_url, original_url, created_at')
+      .limit(50) // Get recent wallpapers to search through
+      .order('created_at', { ascending: false })
       
-    if (wallpaperError || !wallpapers || wallpapers.length === 0) {
-      console.log(`No wallpapers found with shortId: ${shortId}, trying fallback`)
-      // Fallback: use a more targeted query
-      const { data: fallbackWallpapers } = await supabase
-        .from('wallpapers')
-        .select('*')
-        .limit(100)
-        .order('created_at', { ascending: false })
-        
-      const filtered = fallbackWallpapers?.filter(w => {
-        // Get the last 8 characters of the UUID properly
-        const fullId = w.id.toString()
-        const lastEight = fullId.slice(-8)
-        return lastEight === shortId
-      }) || []
-      
-      console.log(`Fallback found ${filtered.length} wallpapers`)
-      if (filtered.length === 0) return null
-      wallpapers = filtered
+    if (wallpaperError) {
+      console.error('Database error:', wallpaperError)
+      return null
     }
+
+    // Filter in JavaScript to find matching shortId
+    const wallpaper = wallpapers?.find(w => {
+      const fullId = w.id.toString()
+      const lastEight = fullId.slice(-8)
+      return lastEight === shortId
+    })
     
-    const wallpaper = wallpapers[0]
     if (!wallpaper) return null
     
-    // Get stats separately for compatibility
+    // Get stats separately but efficiently
     const { data: stats } = await supabase
       .from('wallpaper_stats')
       .select('downloads, likes, views')
       .eq('wallpaper_id', wallpaper.id)
       .maybeSingle()
     
-    const downloads = stats?.downloads || 0
-    const likes = stats?.likes || 0  
-    const views = stats?.views || 0
-    
-    return {
-      ...wallpaper,
-      stats,
-      downloads: formatNumber(downloads),
-      likes: formatNumber(likes),
-      views: formatNumber(views),
-      featured: views > 100,
-      resolutions: [
-        { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
-        { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
-        { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
-        { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
-      ],
-      colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"],
-      uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
-      author: "WallpaperHub"
-    }
+    return formatWallpaperWithStats(wallpaper, stats || { downloads: 0, likes: 0, views: 0 })
   } catch (error) {
     console.error('Error fetching wallpaper:', error)
     return null
+  }
+}
+
+// Helper function to format wallpaper data with stats
+function formatWallpaperWithStats(wallpaper: any, stats: any): WallpaperWithStats {
+  const downloads = stats?.downloads || 0
+  const likes = stats?.likes || 0  
+  const views = stats?.views || 0
+  
+  return {
+    ...wallpaper,
+    stats: stats,
+    downloads: formatNumber(downloads),
+    likes: formatNumber(likes),
+    views: formatNumber(views),
+    featured: views > 100,
+    resolutions: [
+      { label: "HD (720p)", width: 720, height: 1280, size: "1.2 MB" },
+      { label: "Full HD (1080p)", width: 1080, height: 1920, size: "2.8 MB" },
+      { label: "2K (1440p)", width: 1440, height: 2560, size: "4.5 MB" },
+      { label: "4K (2160p)", width: 2160, height: 3840, size: "8.2 MB" },
+    ],
+    colors: ["#8B5CF6", "#06B6D4", "#10B981", "#F59E0B"],
+    uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+    author: "WallpaperHub"
   }
 }
 
@@ -111,7 +105,7 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
   try {
     const { slug } = await params
 
-    // Validate slug format
+    // Validate slug format early for better performance
     if (!isValidSlugFormat(slug)) {
       notFound()
     }
@@ -138,7 +132,17 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
     }
 
     // Generate structured data for SEO
-    const structuredData = generateImageStructuredData(wallpaper, `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`)
+    const pageUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`
+    const structuredData = generateEnhancedWallpaperStructuredData(wallpaper, pageUrl)
+    
+    // Generate breadcrumb structured data
+    const breadcrumbs = [
+      { name: 'Home', url: process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com' },
+      { name: 'Categories', url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/categories` },
+      { name: wallpaper.category, url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/categories/${wallpaper.category.toLowerCase()}` },
+      { name: wallpaper.title, url: pageUrl }
+    ]
+    const breadcrumbData = generateBreadcrumbStructuredData(breadcrumbs)
 
     return (
       <div className="min-h-screen bg-background">
@@ -146,6 +150,12 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(structuredData),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(breadcrumbData),
           }}
         />
           <main>
@@ -160,6 +170,11 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
     notFound()
   }
 }
+
+// Performance optimizations
+export const revalidate = 3600 // Cache for 1 hour
+export const dynamic = 'force-dynamic' // Ensure real-time stats
+export const fetchCache = 'auto' // Allow intelligent caching
 
 // Generate static params for popular wallpapers (commented out for dynamic rendering)
 // export async function generateStaticParams() {
@@ -210,8 +225,26 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
       }
     }
 
-    // Use the same optimized query as the main component
-    const wallpaper = await getWallpaperWithStats(shortId)
+    // Use lightweight query for metadata (we don't need stats for metadata)
+    const { data: wallpapers, error } = await supabase
+      .from('wallpapers')
+      .select('id, title, description, category, image_url, created_at')
+      .limit(50)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      return {
+        title: "Wallpaper Not Found | WallpaperHub",
+        description: "The requested wallpaper could not be found.",
+      }
+    }
+    
+    // Find wallpaper by matching shortId
+    const wallpaper = wallpapers?.find(w => {
+      const fullId = w.id.toString()
+      const lastEight = fullId.slice(-8)
+      return lastEight === shortId
+    })
     
     if (!wallpaper) {
       return {
@@ -219,73 +252,27 @@ export async function generateMetadata({ params }: WallpaperPageProps): Promise<
         description: "The requested wallpaper could not be found.",
       }
     }
-
-    const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`
-    const title = `${wallpaper.title} - Free ${wallpaper.category} Wallpaper | WallpaperHub`
-    const description = wallpaper.description || `Download ${wallpaper.title} wallpaper for free. High-quality ${wallpaper.category.toLowerCase()} wallpaper available in multiple resolutions.`
-    const keywords = [
-      ...new Set([
-        wallpaper.title.toLowerCase(),
-        wallpaper.category.toLowerCase(),
-        'wallpaper',
-        'mobile wallpaper',
-        'phone wallpaper',
-        'free wallpaper',
-        'hd wallpaper',
-        ...(wallpaper.tags || [])
-      ])
-    ].join(', ')
-
-    return {
-      title,
-      description,
-      keywords,
-      authors: [{ name: wallpaper.author || "WallpaperHub" }],
-      creator: wallpaper.author || "WallpaperHub",
-      publisher: "WallpaperHub",
-      category: wallpaper.category,
-      alternates: {
-        canonical: canonicalUrl,
-      },
-      openGraph: {
-        title,
-        description,
-        url: canonicalUrl,
-        siteName: 'WallpaperHub',
-        images: [
-          {
-            url: wallpaper.image_url,
-            width: 1080,
-            height: 1920,
-            alt: `${wallpaper.title} - ${wallpaper.category} wallpaper preview`,
-          },
-        ],
-        locale: 'en_US',
-        type: 'website',
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title,
-        description,
-        images: [wallpaper.image_url],
-        creator: '@wallpaperhub',
-        site: '@wallpaperhub',
-      },
-      robots: {
-        index: true,
-        follow: true,
-        googleBot: {
-          index: true,
-          follow: true,
-          "max-video-preview": -1,
-          "max-image-preview": "large",
-          "max-snippet": -1,
-        },
-      },
-      other: {
-        "pinterest-rich-pin": "true",
-      },
+    
+    // Generate comprehensive metadata using the utility function
+    const pageUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'}/wallpaper/${slug}`
+    
+    // Create a minimal wallpaper object for metadata generation
+    const wallpaperForMetadata = {
+      ...wallpaper,
+      stats: undefined,
+      downloads: "0",
+      likes: "0", 
+      views: "0",
+      featured: false,
+      resolutions: [],
+      colors: [],
+      uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+      author: "WallpaperHub",
+      tags: [],
+      original_url: wallpaper.image_url
     }
+    
+    return generateWallpaperMetadata(wallpaperForMetadata, pageUrl)
   } catch (error) {
     console.error('Error generating metadata:', error)
     return {

@@ -1,7 +1,14 @@
 import { notFound } from "next/navigation"
+import { Metadata } from "next"
 import { Footer } from "@/components/footer"
 import { CategoryWallpapers } from "@/components/category-wallpapers"
 import { CategoryHeader } from "@/components/category-header"
+import { supabase } from "@/lib/supabase"
+import {
+  generateCategoryMetadata,
+  generateCategoryStructuredData,
+  generateBreadcrumbStructuredData
+} from "@/lib/seo-utils"
 
 // Define available categories
 const categories = [
@@ -31,8 +38,41 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound()
   }
 
+  // Get wallpapers for this category for structured data
+  const { data: wallpapers } = await supabase
+    .from('wallpapers')
+    .select('id, title, image_url, thumbnail_url, category, created_at')
+    .eq('category', category.name)
+    .limit(20)
+    .order('created_at', { ascending: false })
+
+  // Generate structured data
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://wallpaperhub.com'
+  const categoryUrl = `${baseUrl}/categories/${categorySlug}`
+  
+  const structuredData = generateCategoryStructuredData(category.name, wallpapers as WallpaperWithStats[] || [])
+  
+  const breadcrumbs = [
+    { name: 'Home', url: baseUrl },
+    { name: 'Categories', url: `${baseUrl}/categories` },
+    { name: category.name, url: categoryUrl }
+  ]
+  const breadcrumbData = generateBreadcrumbStructuredData(breadcrumbs)
+
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbData),
+        }}
+      />
       <main>
         <CategoryHeader category={category} />
         <CategoryWallpapers categorySlug={categorySlug} />
@@ -50,20 +90,24 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 // }
 
 // Generate metadata for each category
-export async function generateMetadata({ params }: CategoryPageProps) {
+export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { category: categorySlug } = await params
   const category = categories.find((cat) => cat.slug === categorySlug)
 
   if (!category) {
     return {
-      title: "Category Not Found",
+      title: "Category Not Found | WallpaperHub",
+      description: "The requested category could not be found.",
     }
   }
 
-  return {
-    title: `${category.name} Wallpapers - WallpaperHub`,
-    description: `Download high-quality ${category.name.toLowerCase()} wallpapers. ${category.description}`,
-  }
+  // Get wallpaper count for this category
+  const { count } = await supabase
+    .from('wallpapers')
+    .select('*', { count: 'exact', head: true })
+    .eq('category', category.name)
+
+  return generateCategoryMetadata(category.name, count || 0)
 }
 
 // Force dynamic rendering to ensure real-time data

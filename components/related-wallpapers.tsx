@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
 import { generateAltText } from "@/lib/seo-utils"
 import { generateWallpaperSlug } from "@/lib/slug-utils"
-import { OptimizedImage } from "./optimized-image"
+// import { OptimizedImage } from "./optimized-image" // Temporarily disabled due to webpack issue
 
 interface RelatedWallpapersProps {
   currentWallpaper: WallpaperWithStats
@@ -76,15 +76,11 @@ export async function RelatedWallpapers({ currentWallpaper }: RelatedWallpapersP
                 <CardContent className="p-0">
                   {/* Image Container */}
                   <div className="relative aspect-[3/4] overflow-hidden">
-                    <OptimizedImage
-                      src={wallpaper.image_url}
-                      thumbnailSrc={wallpaper.thumbnail_url || undefined}
-                      mediumSrc={wallpaper.medium_url || undefined}
-                      largeSrc={wallpaper.large_url || undefined}
-                      originalSrc={wallpaper.original_url || undefined}
+                    <img
+                      src={wallpaper.medium_url || wallpaper.image_url}
                       alt={generateAltText(wallpaper, 'thumbnail')}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      priority={false}
+                      loading="lazy"
                     />
 
                     {/* Overlay */}

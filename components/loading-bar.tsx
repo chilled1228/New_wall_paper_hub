@@ -1,31 +1,41 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import NProgress from "nprogress"
 
-// Configure NProgress
+// Configure NProgress for faster, less intrusive loading
 NProgress.configure({
   showSpinner: false,
-  speed: 500,
-  minimum: 0.3,
-  trickleSpeed: 200,
+  speed: 300,        // Faster animation
+  minimum: 0.1,      // Start immediately 
+  trickleSpeed: 100, // Faster trickle
+  easing: 'ease',
+  positionUsing: 'translate3d'
 })
 
 export function LoadingBar() {
   const pathname = usePathname()
+  const timeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
-    // Start progress bar on route change
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    // Start progress bar immediately on route change
     NProgress.start()
 
-    // Complete progress bar when component mounts (page load complete)
-    const timer = setTimeout(() => {
+    // Complete progress bar quickly when component mounts
+    timeoutRef.current = setTimeout(() => {
       NProgress.done()
-    }, 100)
+    }, 50) // Reduced from 100ms to 50ms
 
     return () => {
-      clearTimeout(timer)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
       NProgress.done()
     }
   }, [pathname])

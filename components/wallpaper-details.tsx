@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Download, Heart, Share2, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { OptimizedImage } from "./optimized-image"
 
 interface WallpaperDetailsProps {
   wallpaper: {
@@ -271,24 +272,28 @@ export function WallpaperDetails({ wallpaper }: WallpaperDetailsProps) {
     <section className="py-4 sm:py-8">
       <div className="container mx-auto px-4 max-w-md sm:max-w-2xl">
         {/* Back Button - Mobile First */}
-        <Button variant="ghost" className="mb-4 -ml-2" onClick={() => window.history.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
+        <Link href="/" className="mb-4 -ml-2 inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
           Back
-        </Button>
+        </Link>
 
         {/* Mobile-First Layout */}
         <div className="space-y-6">
-          {/* Main Image - Full width on mobile with optimization */}
+          {/* Main Image - Optimized progressive loading */}
           <div className="relative w-full">
             <div className="aspect-[9/16] sm:aspect-[3/4] w-full overflow-hidden rounded-lg">
-              {/* Preload the medium quality image for faster loading */}
-              <img
-                src={wallpaper.medium_url || wallpaper.image_url || "/placeholder.svg"}
+              <OptimizedImage
+                src={wallpaper.image_url}
+                thumbnailSrc={wallpaper.thumbnail_url || undefined}
+                mediumSrc={wallpaper.medium_url || undefined}
+                largeSrc={wallpaper.large_url || undefined}
+                originalSrc={wallpaper.original_url || undefined}
                 alt={wallpaper.title}
-                className="w-full h-full object-cover"
-                loading="eager" // Load immediately since this is the main image
-                decoding="async" // Non-blocking decode
-                // Removed aggressive preloading for better performance
+                fill={true}
+                priority={true}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 60vw"
+                quality={85}
+                className="w-full h-full"
               />
             </div>
             {wallpaper.featured && (

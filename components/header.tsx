@@ -1,9 +1,7 @@
 "use client"
 
-import React from "react"
+import React, { useState, useCallback } from "react"
 import type { KeyboardEvent } from "react"
-
-import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Search, Menu, Download, Heart, User } from "lucide-react"
@@ -18,17 +16,30 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("")
   const router = useRouter()
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     if (query.trim()) {
       router.push(`/search?q=${encodeURIComponent(query.trim())}`)
     }
-  }
+  }, [router])
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch(searchQuery)
     }
-  }
+  }, [handleSearch, searchQuery])
+
+  const toggleSearch = useCallback(() => {
+    setIsSearchOpen(prev => !prev)
+  }, [])
+
+  const closeSearch = useCallback(() => {
+    setIsSearchOpen(false)
+  }, [])
+
+  const handleSearchAndClose = useCallback(() => {
+    handleSearch(searchQuery)
+    setIsSearchOpen(false)
+  }, [handleSearch, searchQuery])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -52,18 +63,34 @@ export function Header() {
 
           {/* Center Section: Navigation Menu - Better breakpoints */}
           <div className="flex items-center justify-center flex-1 px-4">
-            {/* Desktop Navigation - Adjusted for small PC screens */}
+            {/* Desktop Navigation - Adjusted for small PC screens with prefetch */}
             <nav className="hidden xl:flex items-center space-x-6">
-              <Link href="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap px-3 py-2 hover:bg-accent/50 font-poppins">
+              <Link 
+                href="/" 
+                prefetch={true}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap px-3 py-2 hover:bg-accent/50 font-poppins"
+              >
                 Home
               </Link>
-              <Link href="/categories" className="text-sm font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap px-3 py-2 hover:bg-accent/50 font-poppins">
+              <Link 
+                href="/categories" 
+                prefetch={true}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap px-3 py-2 hover:bg-accent/50 font-poppins"
+              >
                 Categories
               </Link>
-              <Link href="/popular" className="text-sm font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap px-3 py-2 hover:bg-accent/50 font-poppins">
+              <Link 
+                href="/popular" 
+                prefetch={true}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap px-3 py-2 hover:bg-accent/50 font-poppins"
+              >
                 Popular
               </Link>
-              <Link href="/latest" className="text-sm font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap px-3 py-2 hover:bg-accent/50 font-poppins">
+              <Link 
+                href="/latest" 
+                prefetch={true}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors whitespace-nowrap px-3 py-2 hover:bg-accent/50 font-poppins"
+              >
                 Latest
               </Link>
             </nav>
@@ -92,7 +119,7 @@ export function Header() {
                 variant="ghost" 
                 size="icon" 
                 className="2xl:hidden flex-shrink-0" 
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                onClick={toggleSearch}
                 aria-label="Toggle search"
               >
                 <Search className="h-5 w-5" />
@@ -130,16 +157,32 @@ export function Header() {
                     {/* Navigation Links */}
                     <nav className="flex flex-col p-4 flex-1" role="navigation" aria-label="Main navigation">
                       <div className="space-y-2">
-                        <Link href="/" className="flex items-center py-4 px-4 text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none font-poppins">
+                        <Link 
+                          href="/" 
+                          prefetch={true}
+                          className="flex items-center py-4 px-4 text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none font-poppins"
+                        >
                           Home
                         </Link>
-                        <Link href="/categories" className="flex items-center py-4 px-4 text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none font-poppins">
+                        <Link 
+                          href="/categories" 
+                          prefetch={true}
+                          className="flex items-center py-4 px-4 text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none font-poppins"
+                        >
                           Categories
                         </Link>
-                        <Link href="/popular" className="flex items-center py-4 px-4 text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none font-poppins">
+                        <Link 
+                          href="/popular" 
+                          prefetch={true}
+                          className="flex items-center py-4 px-4 text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none font-poppins"
+                        >
                           Popular
                         </Link>
-                        <Link href="/latest" className="flex items-center py-4 px-4 text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none font-poppins">
+                        <Link 
+                          href="/latest" 
+                          prefetch={true}
+                          className="flex items-center py-4 px-4 text-lg font-medium hover:bg-accent/50 active:bg-accent transition-colors border border-transparent hover:border-border focus:ring-2 focus:ring-primary focus:outline-none font-poppins"
+                        >
                           Latest
                         </Link>
                       </div>
@@ -192,10 +235,7 @@ export function Header() {
                   <Button 
                     size="default" 
                     className="flex-1 h-10" 
-                    onClick={() => {
-                      handleSearch(searchQuery)
-                      setIsSearchOpen(false)
-                    }}
+                    onClick={handleSearchAndClose}
                   >
                     Search
                   </Button>
@@ -203,7 +243,7 @@ export function Header() {
                     variant="outline" 
                     size="default" 
                     className="px-4 h-10" 
-                    onClick={() => setIsSearchOpen(false)}
+                    onClick={closeSearch}
                   >
                     Cancel
                   </Button>
