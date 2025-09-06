@@ -8,7 +8,7 @@ export async function GET() {
     // Get wallpapers with image URLs
     const { data: wallpapers, error } = await supabase
       .from('wallpapers')
-      .select('id, title, description, category, tags, image_url, medium_url, large_url, original_url, created_at, updated_at')
+      .select('id, title, description, category, tags, image_url, medium_url, large_url, original_url, created_at')
       .order('created_at', { ascending: false })
       .limit(1000) // Google Images sitemap limit
     
@@ -59,7 +59,7 @@ export async function GET() {
         <image:license>${baseUrl}/license</image:license>
         <image:family_friendly>yes</image:family_friendly>
       </image:image>` : ''}
-      <lastmod>${wallpaper.updated_at || wallpaper.created_at}</lastmod>
+      <lastmod>${wallpaper.created_at}</lastmod>
       <changefreq>monthly</changefreq>
       <priority>0.8</priority>
     </url>`

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { generateWallpaperSlug } from '@/lib/slug-utils'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -8,7 +9,7 @@ export async function GET() {
     // Get all wallpapers (paginated for performance)
     const { data: wallpapers } = await supabase
       .from('wallpapers')
-      .select('id, slug, title, updated_at, created_at, category, image_url')
+      .select('id, title, created_at, category, image_url')
       .order('created_at', { ascending: false })
       .limit(10000) // Limit for XML size
     
@@ -20,8 +21,9 @@ export async function GET() {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${wallpapers.map(wallpaper => {
-  const url = `${baseUrl}/wallpaper/${wallpaper.slug || wallpaper.id}`
-  const lastmod = new Date(wallpaper.updated_at || wallpaper.created_at).toISOString()
+  const slug = generateWallpaperSlug(wallpaper)
+  const url = `${baseUrl}/wallpaper/${slug}`
+  const lastmod = new Date(wallpaper.created_at).toISOString()
   
   return `  <url>
     <loc>${url}</loc>
