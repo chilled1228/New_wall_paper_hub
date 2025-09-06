@@ -7,8 +7,8 @@ export const revalidate = 0
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background">
-      <main>
+    <div className="min-h-screen bg-background flex flex-col">
+      <main className="flex-1">
         <SimpleGallery />
       </main>
       <Footer />

@@ -4,8 +4,8 @@ import { TrendingUp, Star, Clock } from "lucide-react"
 
 export default function CategoriesPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <main>
+    <div className="min-h-screen bg-background flex flex-col">
+      <main className="flex-1">
         {/* Hero Section */}
         <section className="py-16 lg:py-24 bg-gradient-to-br from-primary/5 via-background to-accent/5">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">

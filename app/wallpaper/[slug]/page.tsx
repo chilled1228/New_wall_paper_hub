@@ -145,7 +145,7 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
     const breadcrumbData = generateBreadcrumbStructuredData(breadcrumbs)
 
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -158,7 +158,7 @@ export default async function WallpaperPage({ params }: WallpaperPageProps) {
             __html: JSON.stringify(breadcrumbData),
           }}
         />
-          <main>
+          <main className="flex-1">
           <WallpaperDetails wallpaper={wallpaper} />
           <RelatedWallpapers currentWallpaper={wallpaper} />
         </main>

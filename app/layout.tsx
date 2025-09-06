@@ -5,8 +5,8 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Header } from "@/components/header"
 import { LoadingBar } from "@/components/loading-bar"
-import CacheInvalidator from "@/components/cache-invalidator"
-import { Toaster } from "@/components/ui/sonner"
+// import CacheInvalidator from "@/components/cache-invalidator"
+// import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -173,11 +173,11 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${poppins.variable} ${roboto.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <CacheInvalidator />
+          {/* <CacheInvalidator /> */}
           <LoadingBar />
           <Header />
           {children}
-          <Toaster />
+          {/* <Toaster /> */}
         </ThemeProvider>
       </body>
     </html>

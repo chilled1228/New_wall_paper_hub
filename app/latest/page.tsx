@@ -7,6 +7,8 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
 import { generateWallpaperSlug } from "@/lib/slug-utils"
+import { Footer } from "@/components/footer"
+import { Metadata } from "next"
 
 
 export const metadata: Metadata = {
@@ -43,8 +45,8 @@ export default async function LatestPage() {
     .filter(wallpaper => wallpaper.id && wallpaper.title && wallpaper.image_url)
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="container mx-auto px-4 py-8 flex-1">
         {/* Page Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">
@@ -148,6 +150,7 @@ export default async function LatestPage() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   )
 }

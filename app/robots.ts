@@ -15,6 +15,10 @@ export default function robots(): MetadataRoute.Robots {
           '/search',
           '/popular',
           '/latest',
+          '*.jpg',
+          '*.jpeg',
+          '*.png',
+          '*.webp',
         ],
         disallow: [
           '/admin/',

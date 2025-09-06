@@ -133,17 +133,19 @@ function OptimizedImageInternal({
 
   // Determine the appropriate high-quality source based on screen size
   const getHighQualitySrc = () => {
-    if (typeof window === 'undefined') return mediumSrc || originalSrc || src
+    if (typeof window === 'undefined') return mediumSrc || largeSrc || originalSrc || src
 
     const screenWidth = window.innerWidth
     
-    // Use medium for most viewing, original only for very large screens or downloads
+    // Progressive quality based on screen size
     if (screenWidth <= 1200 && mediumSrc) {
-      return mediumSrc // Good quality for preview pages
+      return mediumSrc // Good quality for most devices
+    } else if (screenWidth <= 1800 && largeSrc) {
+      return largeSrc // High quality for large screens
     } else if (originalSrc) {
-      return originalSrc // Full quality for large screens
+      return originalSrc // Full quality for very large screens
     } else {
-      return mediumSrc || src // Fallback
+      return largeSrc || mediumSrc || src // Fallback chain
     }
   }
 

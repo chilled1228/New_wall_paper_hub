@@ -14,7 +14,10 @@ import json
 from datetime import datetime
 
 from PIL import Image, ImageFilter, ImageEnhance
+from PIL.ExifTags import TAGS
 import pillow_heif
+import piexif
+from iptcinfo3 import IPTCInfo
 
 class ImageProcessor:
     """Handles all image processing operations"""
@@ -26,10 +29,11 @@ class ImageProcessor:
         # Register HEIF opener with Pillow (for iPhone photos)
         pillow_heif.register_heif_opener()
         
-        # Resolution configurations - thumbnail for speed, medium for preview, original for download
+        # Resolution configurations - thumbnail for grid, medium for preview, large for detail, original for download
         self.resolutions = {
             'thumbnail': {'width': 150, 'height': 200, 'quality': 60},
             'medium': {'width': 400, 'height': 533, 'quality': 75},
+            'large': {'width': 720, 'height': 960, 'quality': 85},
             'original': {'width': None, 'height': None, 'quality': 95}  # Keep original size
         }
         
@@ -203,13 +207,109 @@ class ImageProcessor:
         
         return enhanced
     
-    def process_single_resolution(self, image_path: str, resolution: str) -> Tuple[bool, str, Dict]:
+    def inject_seo_metadata(self, image_path: str, wallpaper_metadata: Dict) -> bool:
         """
-        Process image for a single resolution
+        Inject SEO metadata into image EXIF and IPTC data
+        
+        Args:
+            image_path: Path to the image file
+            wallpaper_metadata: Dictionary containing wallpaper information
+            
+        Returns:
+            Boolean indicating success
+        """
+        try:
+            # Prepare metadata for injection
+            title = wallpaper_metadata.get('title', 'Mobile Wallpaper')
+            description = wallpaper_metadata.get('description', 'High-quality mobile wallpaper')
+            category = wallpaper_metadata.get('category', 'wallpaper')
+            tags = wallpaper_metadata.get('tags', [])
+            website_url = "https://wallpaperhub.com"
+            
+            # Keywords for Google ranking
+            keywords = [
+                f"{category} wallpaper",
+                "mobile wallpaper", 
+                "phone background",
+                "HD wallpaper",
+                "smartphone wallpaper"
+            ]
+            if tags:
+                keywords.extend(tags[:5])  # Add first 5 tags
+            
+            # Create EXIF data
+            exif_dict = {
+                "0th": {
+                    piexif.ImageIFD.ImageDescription: description.encode('utf-8'),
+                    piexif.ImageIFD.Artist: "WallpaperHub".encode('utf-8'),
+                    piexif.ImageIFD.Software: "WallpaperHub Publisher V3".encode('utf-8'),
+                    piexif.ImageIFD.Copyright: f"© WallpaperHub - {website_url}".encode('utf-8'),
+                    piexif.ImageIFD.XPTitle: title.encode('utf-16le'),
+                    piexif.ImageIFD.XPComment: description.encode('utf-16le'),
+                    piexif.ImageIFD.XPKeywords: ", ".join(keywords).encode('utf-16le'),
+                    piexif.ImageIFD.XPSubject: f"{category} mobile wallpaper".encode('utf-16le'),
+                },
+                "Exif": {
+                    piexif.ExifIFD.UserComment: f"{title} - {description}".encode('utf-8'),
+                },
+                "1st": {},
+                "thumbnail": None
+            }
+            
+            # Convert to bytes
+            exif_bytes = piexif.dump(exif_dict)
+            
+            # Load image and inject EXIF
+            with Image.open(image_path) as img:
+                # Ensure RGB mode for JPEG
+                if img.mode != 'RGB':
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'RGBA':
+                        background.paste(img, mask=img.split()[-1])
+                    else:
+                        background.paste(img)
+                    img = background
+                
+                # Save with EXIF data
+                img.save(image_path, 'JPEG', exif=exif_bytes, quality=95, optimize=True)
+            
+            # Also add IPTC metadata using iptcinfo3
+            try:
+                info = IPTCInfo(image_path, force=True)
+                
+                # Set IPTC fields for better SEO
+                info['keywords'] = keywords[:15]  # IPTC supports up to 32 keywords, limit to 15
+                info['caption/abstract'] = description
+                info['headline'] = title
+                info['object name'] = title
+                info['category'] = category.upper()[:3]  # IPTC category is 3-char code
+                info['supplemental category'] = [category, 'mobile', 'wallpaper']
+                info['copyright notice'] = f"© WallpaperHub - {website_url}"
+                info['credit'] = "WallpaperHub"
+                info['source'] = website_url
+                info['special instructions'] = f"Mobile wallpaper in {category} category - Free download"
+                
+                # Save IPTC data
+                info.save()
+                
+            except Exception as iptc_error:
+                print(f"Warning: Could not add IPTC metadata: {iptc_error}")
+                # Continue even if IPTC fails, EXIF is more important
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error injecting SEO metadata: {e}")
+            return False
+    
+    def process_single_resolution(self, image_path: str, resolution: str, wallpaper_metadata: Dict = None) -> Tuple[bool, str, Dict]:
+        """
+        Process image for a single resolution with SEO metadata injection
         
         Args:
             image_path: Path to the original image
             resolution: Resolution type to process
+            wallpaper_metadata: Optional metadata for SEO injection
             
         Returns:
             Tuple of (success, output_path, metadata)
@@ -251,6 +351,10 @@ class ImageProcessor:
                 
                 processed.save(output_path, **save_kwargs)
                 
+                # Inject SEO metadata if provided
+                if wallpaper_metadata:
+                    self.inject_seo_metadata(str(output_path), wallpaper_metadata)
+                
                 # Generate metadata
                 metadata = {
                     'resolution': resolution,
@@ -269,12 +373,13 @@ class ImageProcessor:
         except Exception as e:
             return False, "", {'error': str(e)}
     
-    def process_all_resolutions(self, image_path: str) -> Dict:
+    def process_all_resolutions(self, image_path: str, wallpaper_metadata: Dict = None) -> Dict:
         """
-        Process image for all resolutions
+        Process image for all resolutions with SEO metadata injection
         
         Args:
             image_path: Path to the original image
+            wallpaper_metadata: Optional metadata for SEO injection
             
         Returns:
             Dictionary with results for all resolutions
@@ -300,7 +405,7 @@ class ImageProcessor:
         
         # Process each resolution
         for resolution in self.resolutions.keys():
-            success, output_path, metadata = self.process_single_resolution(image_path, resolution)
+            success, output_path, metadata = self.process_single_resolution(image_path, resolution, wallpaper_metadata)
             
             if success:
                 results['processed_files'][resolution] = output_path

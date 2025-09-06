@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
 import { generateWallpaperSlug } from "@/lib/slug-utils"
@@ -89,12 +90,15 @@ export async function SimpleGallery() {
           return (
             <Link key={wallpaper.id} href={`/wallpaper/${slug}`}>
               <div className="group cursor-pointer">
-                <div className="aspect-[9/16] overflow-hidden bg-muted">
-                  <img
+                <div className="aspect-[9/16] overflow-hidden bg-muted relative">
+                  <Image
                     src={wallpaper.medium_url || wallpaper.image_url || "/placeholder.svg"}
-                    alt={wallpaper.title}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    alt={`${wallpaper.title} - Mobile wallpaper in ${wallpaper.category} category`}
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
                     loading="lazy"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                    quality={85}
                   />
                 </div>
                 <div className="mt-2">

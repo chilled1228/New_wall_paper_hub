@@ -96,6 +96,13 @@
   * {
     @apply border-border;
   }
+  
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -159,6 +166,15 @@
 }
 
 @layer components {
+  /* Layout utility for sticky footer */
+  .layout-container {
+    @apply min-h-screen flex flex-col;
+  }
+  
+  .layout-main {
+    @apply flex-1;
+  }
+
   /* Flat design text utility - Using brand orange for emphasis */
   .accent-text {
     @apply text-brand-orange font-semibold;

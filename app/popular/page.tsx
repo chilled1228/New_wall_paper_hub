@@ -7,6 +7,7 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { WallpaperWithStats } from "@/lib/database.types"
 import { generateWallpaperSlug } from "@/lib/slug-utils"
+import { Footer } from "@/components/footer"
 
 // Helper function to format numbers for display
 function formatNumber(num: number): string {
@@ -107,8 +108,8 @@ export default async function PopularPage() {
   })
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="container mx-auto px-4 py-8 flex-1">
         {/* Page Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-4">
@@ -220,6 +221,7 @@ export default async function PopularPage() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   )
 }
