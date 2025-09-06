@@ -62,11 +62,14 @@ async function addRealStats(wallpapers: any[]): Promise<WallpaperWithStats[]> {
 }
 
 export async function SimpleGallery() {
-  // Fetch all wallpapers directly from Supabase
+  // Fetch wallpapers with stats in a single optimized query
   const { data: wallpapers, error } = await supabase
     .from('wallpapers')
-    .select('*')
-    .limit(100)
+    .select(`
+      id, title, category, image_url, thumbnail_url, medium_url, large_url, original_url, created_at,
+      wallpaper_stats(views, likes, downloads)
+    `)
+    .limit(50) // Reduced from 100 for faster loading
     .order('created_at', { ascending: false })
   
   if (error || !wallpapers) {
@@ -77,9 +80,24 @@ export async function SimpleGallery() {
     )
   }
 
-  // Filter and add stats
+  // Filter and format wallpapers with stats (no additional DB query needed)
   const filteredWallpapers = wallpapers.filter(w => w.id && w.title && w.image_url)
-  const wallpapersWithStats = await addRealStats(filteredWallpapers)
+  const wallpapersWithStats = filteredWallpapers.map(wallpaper => {
+    const stats = wallpaper.wallpaper_stats?.[0] || { views: 0, likes: 0, downloads: 0 }
+    return {
+      ...wallpaper,
+      stats,
+      downloads: formatNumber(stats.downloads || 0),
+      likes: formatNumber(stats.likes || 0),
+      views: formatNumber(stats.views || 0),
+      featured: (stats.views || 0) > 100,
+      resolutions: [],
+      colors: [],
+      uploadDate: wallpaper.created_at?.split('T')[0] || "2024-01-01",
+      author: "WallpaperHub",
+      tags: []
+    }
+  })
 
   return (
     <div className="container mx-auto px-4 py-8">

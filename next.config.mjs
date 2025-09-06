@@ -235,6 +235,16 @@ const nextConfig = {
           },
         ],
       },
+      // Homepage aggressive caching
+      {
+        source: '/',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=60, stale-while-revalidate=300',
+          },
+        ],
+      },
     ]
   },
 }

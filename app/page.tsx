@@ -1,9 +1,8 @@
 import { SimpleGallery } from "@/components/simple-gallery"
 import { Footer } from "@/components/footer"
 
-// Force dynamic rendering to ensure real-time data
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+// Enable static generation with reasonable revalidation
+export const revalidate = 60 // Revalidate every minute
 
 export default function HomePage() {
   return (
